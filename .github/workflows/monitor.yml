@@ -2,7 +2,7 @@ name: CVM Fatos Relevantes Monitor
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # a cada 15 minutos
+    - cron: '7,22,37,52 * * * *' 
   workflow_dispatch:          # permite disparar manualmente pela aba Actions
 
 permissions:
