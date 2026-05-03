@@ -1,0 +1,51 @@
+name: CVM Fatos Relevantes Monitor
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # a cada 15 minutos
+  workflow_dispatch:          # permite disparar manualmente pela aba Actions
+
+permissions:
+  contents: write             # necessário pra commitar seen_protocols.json de volta
+
+concurrency:
+  group: cvm-monitor
+  cancel-in-progress: false   # evita execuções concorrentes pisando no estado
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write email_config.json from secret
+        env:
+          EMAIL_CONFIG: ${{ secrets.EMAIL_CONFIG_JSON }}
+        run: printf '%s' "$EMAIL_CONFIG" > email_config.json
+
+      - name: Run monitor
+        run: python cvm_fatos_relevantes_claude.py
+
+      - name: Commit updated state
+        run: |
+          rm -f email_config.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seen_protocols.json
+          if git diff --staged --quiet; then
+            echo "Nenhum protocolo novo, nada a commitar."
+          else
+            git commit -m "chore: update seen_protocols [skip ci]"
+            git push
+          fi
