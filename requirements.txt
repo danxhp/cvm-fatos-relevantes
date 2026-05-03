@@ -1,0 +1,4 @@
+anthropic
+beautifulsoup4
+pypdf
+requests
