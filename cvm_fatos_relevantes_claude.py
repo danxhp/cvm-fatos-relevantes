@@ -424,14 +424,16 @@ def build_download_url(filing: Filing) -> str:
 # MONITOR LOGIC
 # ============================================================================
 
-def gather_all_filings(session: requests.Session) -> List[Filing]:
+def gather_all_filings(session: requests.Session) -> Tuple[List[Filing], bool]:
     filings: List[Filing] = []
+    cvm_ok = False  # True se ao menos uma categoria da CVM respondeu sem erro
 
     # CVM (B3-listed issuers) — Fato Relevante + Aviso aos Acionistas
     for cat_code, cat_label in CVM_CATEGORIES:
         try:
             raw = fetch_raw_documents(session, cat_code)
             filings.extend(parse_rows(raw))
+            cvm_ok = True
         except Exception as e:
             log(f"WARNING: CVM fetch failed para {cat_label}: {e}")
 
@@ -440,13 +442,13 @@ def gather_all_filings(session: requests.Session) -> List[Filing]:
         if company.get("sec_cik"):
             filings.extend(fetch_sec_filings(session, company))
 
-    return filings
+    return filings, cvm_ok
 
 
 def check_once(
     session: requests.Session, bootstrap: bool = False
-) -> Tuple[List[Filing], int]:
-    filings = gather_all_filings(session)
+) -> Tuple[List[Filing], int, bool]:
+    filings, cvm_ok = gather_all_filings(session)
 
     seen = load_seen_protocols()
 
@@ -455,7 +457,7 @@ def check_once(
             seen.add(f.unique_key)
         save_seen_protocols(seen)
         log(f"Bootstrap complete. Marked {len(filings)} protocols as seen.")
-        return [], len(filings)
+        return [], len(filings), cvm_ok
 
     new_filings = [f for f in filings if f.unique_key not in seen]
 
@@ -464,7 +466,7 @@ def check_once(
             seen.add(f.unique_key)
         save_seen_protocols(seen)
 
-    return new_filings, len(filings)
+    return new_filings, len(filings), cvm_ok
 
 
 # ============================================================================
@@ -497,6 +499,39 @@ def get_anthropic_api_key() -> Optional[str]:
         except Exception:
             pass
     return None
+
+
+def get_healthcheck_url() -> Optional[str]:
+    """
+    URL de ping do dead-man's-switch (ex.: healthchecks.io).
+    Lida do env HEALTHCHECK_URL ou do campo healthcheck_url em email_config.json.
+    """
+    url = os.environ.get("HEALTHCHECK_URL")
+    if url:
+        return url.strip()
+    if EMAIL_CONFIG_FILE.exists():
+        try:
+            with open(EMAIL_CONFIG_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            v = cfg.get("healthcheck_url")
+            if v:
+                return str(v).strip()
+        except Exception:
+            pass
+    return None
+
+
+def ping_healthcheck(url: str, fail: bool = False) -> None:
+    """
+    Sinaliza vida ao watchdog externo. fail=True pinga o endpoint /fail
+    (checagem rodou mas a fonte estava indisponível). Nunca deixa o monitor
+    quebrar por causa do ping.
+    """
+    target = url.rstrip("/") + "/fail" if fail else url
+    try:
+        requests.get(target, timeout=10)
+    except Exception as e:
+        log(f"WARNING: heartbeat ping falhou: {e}")
 
 
 def fetch_document_text(
@@ -623,6 +658,7 @@ DEFAULT_EMAIL_CONFIG = {
     "to_addrs": ["d.xhp@hotmail.com"],
     "subject_prefix": "[Fato Relevante]",
     "anthropic_api_key": "",
+    "healthcheck_url": "",
 }
 
 
@@ -839,7 +875,7 @@ def main() -> int:
             _ = check_once(session, bootstrap=True)
             return 0
 
-        new_filings, total_matched = check_once(session, bootstrap=False)
+        new_filings, total_matched, cvm_ok = check_once(session, bootstrap=False)
 
         summaries: Dict[str, List[str]] = {}
         if new_filings:
@@ -862,6 +898,14 @@ def main() -> int:
             email_cfg = load_email_config()
             if email_cfg:
                 send_email_alert(email_cfg, new_filings, summaries)
+
+        # Heartbeat / dead-man's-switch: sinaliza que uma checagem real ocorreu.
+        # Sucesso quando a CVM respondeu; /fail quando ela ficou indisponível
+        # (o run "verde" mascararia isso). Se o script travar antes daqui, nenhum
+        # ping é enviado e o watchdog externo alerta pelo silêncio.
+        hc_url = get_healthcheck_url()
+        if hc_url:
+            ping_healthcheck(hc_url, fail=not cvm_ok)
 
         return 0
 
