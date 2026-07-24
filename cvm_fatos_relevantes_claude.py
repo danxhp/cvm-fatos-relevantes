@@ -819,6 +819,82 @@ def send_email_alert(
         _send_one_email(cfg, filing, summaries.get(filing.protocol))
 
 
+# ============================================================================
+# TELEGRAM ALERTS
+# ============================================================================
+
+def get_telegram_config() -> Optional[Dict]:
+    """
+    Retorna {'bot_token', 'chat_id'} se o Telegram estiver habilitado, senão None.
+    Lê das envs TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID ou do bloco "telegram"
+    em email_config.json ({"enabled": true, "bot_token": "...", "chat_id": ...}).
+    """
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not (bot_token and chat_id) and EMAIL_CONFIG_FILE.exists():
+        try:
+            with open(EMAIL_CONFIG_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            tg = cfg.get("telegram") or {}
+            if tg.get("enabled"):
+                bot_token = bot_token or tg.get("bot_token")
+                chat_id = chat_id or tg.get("chat_id")
+        except Exception as e:
+            log(f"WARNING: failed to load telegram config: {e}")
+    if not bot_token or chat_id in (None, ""):
+        return None
+    return {"bot_token": str(bot_token).strip(), "chat_id": str(chat_id).strip()}
+
+
+def _render_filing_telegram(filing: Filing, bullets: Optional[List[str]]) -> str:
+    e = html.escape
+    category = filing.category or "Comunicado"
+    lines = [
+        f"<b>[{e(category)}] {e(filing.ticker)} — {e(filing.company_name)}</b>",
+        f"<i>{e(filing.subject or filing.doc_type or 'Sem assunto')}</i>",
+    ]
+    if filing.filing_time:
+        lines.append(f"🗓 {e(filing.filing_time)}")
+    lines.append("")
+    if bullets:
+        lines.extend(f"• {e(b)}" for b in bullets)
+    else:
+        lines.append("<i>Resumo indisponível.</i>")
+    lines.append("")
+    url = e(build_download_url(filing))
+    lines.append(f'<a href="{url}">Baixar documento original</a>')
+    # Limite do Telegram é 4096 caracteres por mensagem.
+    return "\n".join(lines)[:4000]
+
+
+def _send_one_telegram(cfg: Dict, filing: Filing, bullets: Optional[List[str]]) -> bool:
+    api_url = f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage"
+    payload = {
+        "chat_id": cfg["chat_id"],
+        "text": _render_filing_telegram(filing, bullets),
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
+    try:
+        r = requests.post(api_url, json=payload, timeout=30)
+        r.raise_for_status()
+        log(f"Telegram enviado: {filing.identifier}")
+        return True
+    except Exception as ex:
+        log(f"ERROR ao enviar Telegram para {filing.identifier}: {ex}")
+        return False
+
+
+def send_telegram_alert(
+    cfg: Dict,
+    new_filings: List[Filing],
+    summaries: Optional[Dict[str, List[str]]] = None,
+) -> None:
+    summaries = summaries or {}
+    for filing in new_filings:
+        _send_one_telegram(cfg, filing, summaries.get(filing.protocol))
+
+
 def format_new_filings(
     new_filings: List[Filing],
     summaries: Optional[Dict[str, List[str]]] = None,
@@ -851,24 +927,35 @@ def main() -> int:
     bootstrap = "--bootstrap" in sys.argv
     once = "--once" in sys.argv
     test_email = "--test-email" in sys.argv
+    test_telegram = "--test-telegram" in sys.argv
 
     session = make_session()
 
     try:
+        if test_email or test_telegram:
+            sample = Filing(
+                cvm_code="0", company_name="Teste", ticker="TEST",
+                protocol="TEST-0001", sequence="0", version="0",
+                desc_type="Teste", category="Teste",
+                doc_type="Mensagem de teste", subject="Verificação de envio",
+                filing_time=datetime.now().strftime("%d/%m/%Y %H:%M"),
+                download_params={"_sec_url": "https://example.com/teste"},
+            )
+
         if test_email:
             cfg = load_email_config()
             if not cfg:
                 print("Email não está configurado/habilitado em email_config.json.")
                 return 1
-            sample = Filing(
-                cvm_code="0", company_name="Teste", ticker="TEST",
-                protocol="TEST-0001", sequence="0", version="0",
-                desc_type="Teste", category="Teste",
-                doc_type="Email de teste", subject="Verificação de envio",
-                filing_time=datetime.now().strftime("%d/%m/%Y %H:%M"),
-                download_params={"_sec_url": "https://example.com/teste"},
-            )
             send_email_alert(cfg, [sample])
+            return 0
+
+        if test_telegram:
+            tg_cfg = get_telegram_config()
+            if not tg_cfg:
+                print("Telegram não está configurado/habilitado em email_config.json.")
+                return 1
+            send_telegram_alert(tg_cfg, [sample])
             return 0
 
         if bootstrap:
@@ -898,6 +985,9 @@ def main() -> int:
             email_cfg = load_email_config()
             if email_cfg:
                 send_email_alert(email_cfg, new_filings, summaries)
+            tg_cfg = get_telegram_config()
+            if tg_cfg:
+                send_telegram_alert(tg_cfg, new_filings, summaries)
 
         # Heartbeat / dead-man's-switch: sinaliza que uma checagem real ocorreu.
         # Sucesso quando a CVM respondeu; /fail quando ela ficou indisponível

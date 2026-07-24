@@ -101,7 +101,12 @@ Na primeira execução, um template é criado automaticamente. Preencha:
   "to_addrs": ["dest1@exemplo.com", "dest2@exemplo.com"],
   "subject_prefix": "[Fato Relevante]",
   "anthropic_api_key": "sk-ant-...",
-  "healthcheck_url": "https://hc-ping.com/SEU-UUID"
+  "healthcheck_url": "https://hc-ping.com/SEU-UUID",
+  "telegram": {
+    "enabled": true,
+    "bot_token": "123456789:AA...",
+    "chat_id": 123456789
+  }
 }
 ```
 
@@ -112,9 +117,26 @@ Na primeira execução, um template é criado automaticamente. Preencha:
 | `from_addr` / `to_addrs` | Remetente e lista de destinatários. |
 | `anthropic_api_key` | Chave da API da Anthropic para os resumos. Sem ela, os emails saem sem o resumo. |
 | `healthcheck_url` | URL de ping do heartbeat (ver [seção 3](#3-heartbeat--dead-mans-switch-healthchecksio)). Vazio = desativado. |
+| `telegram` | Alerta paralelo no Telegram (ver abaixo). `enabled: false` ou bloco ausente = desativado. |
 
 > `anthropic_api_key` e `healthcheck_url` também podem vir das variáveis de ambiente
-> `ANTHROPIC_API_KEY` e `HEALTHCHECK_URL` (têm prioridade sobre o arquivo).
+> `ANTHROPIC_API_KEY` e `HEALTHCHECK_URL`; o Telegram, de `TELEGRAM_BOT_TOKEN` /
+> `TELEGRAM_CHAT_ID` (todas têm prioridade sobre o arquivo).
+
+### Alertas no Telegram (opcional)
+
+Além do email, cada fato relevante pode ser enviado para um chat do Telegram via bot. É o mesmo
+resumo (bullets do Claude) numa mensagem formatada, com link para o documento.
+
+1. Crie um bot com o [@BotFather](https://t.me/BotFather) e copie o **bot token**.
+2. Descubra o **chat_id** de destino (mande uma mensagem ao bot e consulte
+   `https://api.telegram.org/bot<TOKEN>/getUpdates`, ou use um bot como `@userinfobot`).
+   Chat privado = id positivo; grupo/canal = id negativo.
+3. Preencha o bloco `telegram` no config e teste:
+
+```bash
+python cvm_fatos_relevantes_claude.py --test-telegram
+```
 
 ---
 
