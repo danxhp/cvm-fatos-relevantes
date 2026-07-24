@@ -76,6 +76,8 @@ USER_AGENT = (
 SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_FILE = SCRIPT_DIR / "seen_protocols.json"
 LOG_FILE = SCRIPT_DIR / "monitor_log.txt"
+SEND_LOG_FILE = SCRIPT_DIR / "send_log.txt"
+SEND_LOG_HEADER = "timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe"
 EMAIL_CONFIG_FILE = SCRIPT_DIR / "email_config.json"
 
 # SEC EDGAR — for foreign-listed issuers like Afya (NASDAQ)
@@ -160,6 +162,37 @@ def log(msg: str) -> None:
     print(line)
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(line + "\n")
+
+
+def _sanitize_log_field(value) -> str:
+    """Remove | e quebras de linha para não corromper o formato pipe-separated."""
+    return re.sub(r"[|\r\n]+", " ", str(value if value is not None else "")).strip()
+
+
+def log_send(channel: str, filing: "Filing", ok: bool, detail: str = "") -> None:
+    """
+    Registra uma tentativa de envio no send_log.txt — durável (commitado de volta
+    pelo Actions) e separado por ' | '. Uma linha por canal (email/telegram) por filing.
+    """
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    row = " | ".join([
+        stamp,
+        channel,
+        "OK" if ok else "FAIL",
+        _sanitize_log_field(filing.ticker),
+        _sanitize_log_field(filing.protocol),
+        _sanitize_log_field(filing.category),
+        _sanitize_log_field(filing.subject or filing.doc_type),
+        _sanitize_log_field(detail),
+    ])
+    try:
+        new_file = (not SEND_LOG_FILE.exists()) or SEND_LOG_FILE.stat().st_size == 0
+        with open(SEND_LOG_FILE, "a", encoding="utf-8") as f:
+            if new_file:
+                f.write(SEND_LOG_HEADER + "\n")
+            f.write(row + "\n")
+    except Exception as e:
+        log(f"WARNING: falha ao gravar send_log: {e}")
 
 
 def strip_html(text: str) -> str:
@@ -803,9 +836,11 @@ def _send_one_email(cfg: Dict, filing: Filing, bullets: Optional[List[str]]) -> 
                 server.login(cfg["smtp_username"], cfg["smtp_password"])
                 server.send_message(msg)
         log(f"Email enviado: {msg['Subject']}")
+        log_send("email", filing, True)
         return True
     except Exception as e:
         log(f"ERROR ao enviar email para {filing.identifier}: {e}")
+        log_send("email", filing, False, str(e))
         return False
 
 
@@ -879,9 +914,11 @@ def _send_one_telegram(cfg: Dict, filing: Filing, bullets: Optional[List[str]]) 
         r = requests.post(api_url, json=payload, timeout=30)
         r.raise_for_status()
         log(f"Telegram enviado: {filing.identifier}")
+        log_send("telegram", filing, True)
         return True
     except Exception as ex:
         log(f"ERROR ao enviar Telegram para {filing.identifier}: {ex}")
+        log_send("telegram", filing, False, str(ex))
         return False
 
 

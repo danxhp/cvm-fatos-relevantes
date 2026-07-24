@@ -62,8 +62,9 @@ para sobreviver entre execuções.
 | `cvm_fatos_relevantes_claude.py` | O monitor. Toda a lógica está aqui. |
 | `.github/workflows/monitor.yml` | Workflow do GitHub Actions que executa o monitor. |
 | `seen_protocols.json` | "Memória" do que já foi visto. **Autoritativo no GitHub** (o Actions commita de volta). |
-| `email_config.json` | Credenciais SMTP, chave da Anthropic, destinatários, URL do heartbeat. **Não versionado** (`.gitignore`); na nuvem é recriado do secret. |
-| `monitor_log.txt` | Log de execução local. Não versionado. |
+| `send_log.txt` | Registro **durável** de cada envio (email/telegram), separado por ` \| `. Versionado e commitado de volta pelo Actions. |
+| `email_config.json` | Credenciais SMTP, chave da Anthropic, destinatários, URL do heartbeat, bloco Telegram. **Não versionado** (`.gitignore`); na nuvem é recriado do secret. |
+| `monitor_log.txt` | Log de execução local (texto livre, verboso). **Efêmero na nuvem** — não versionado. |
 | `requirements.txt` | Dependências Python. |
 
 ---
@@ -283,6 +284,9 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
   `event=workflow_dispatch`.
 - **Heartbeat:** o painel do healthchecks.io mostra o último ping; se ficar vermelho, você recebe
   o alerta por email — é o seu sinal de que algo na cadeia travou.
+- **Histórico de envios:** [`send_log.txt`](send_log.txt) tem uma linha por envio (email e
+  telegram separados), com `status` `OK`/`FAIL` e detalhe do erro quando falha. É durável (o
+  Actions commita de volta), então serve de auditoria: `2026-... | telegram | OK | RDOR3 | ...`.
 - **"Verde mas sem checar":** se a CVM estiver fora, o run passa mas o heartbeat recebe um `/fail`,
   então o healthchecks.io ainda te avisa.
 
