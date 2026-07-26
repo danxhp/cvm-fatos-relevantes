@@ -22,6 +22,7 @@ Then schedule it every 15 minutes with:
 
 from __future__ import annotations
 
+import csv
 import html
 import io
 import json
@@ -78,6 +79,8 @@ STATE_FILE = SCRIPT_DIR / "seen_protocols.json"
 LOG_FILE = SCRIPT_DIR / "monitor_log.txt"
 SEND_LOG_FILE = SCRIPT_DIR / "send_log.txt"
 SEND_LOG_HEADER = "timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe"
+ARCHIVE_FILE = SCRIPT_DIR / "fatos_arquivo.csv"
+ARCHIVE_HEADER = ["data", "ticker", "empresa", "categoria", "assunto", "protocolo", "link"]
 EMAIL_CONFIG_FILE = SCRIPT_DIR / "email_config.json"
 
 # SEC EDGAR — for foreign-listed issuers like Afya (NASDAQ)
@@ -500,6 +503,34 @@ def check_once(
         save_seen_protocols(seen)
 
     return new_filings, len(filings), cvm_ok
+
+
+def archive_filings(new_filings: List[Filing]) -> None:
+    """
+    Acrescenta os filings detectados ao arquivo histórico CSV (base consultável,
+    sem resumo do Claude — só metadados + título). Uma linha por filing.
+    Durável: o Actions commita fatos_arquivo.csv de volta ao repositório.
+    """
+    if not new_filings:
+        return
+    try:
+        new_file = (not ARCHIVE_FILE.exists()) or ARCHIVE_FILE.stat().st_size == 0
+        with open(ARCHIVE_FILE, "a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            if new_file:
+                writer.writerow(ARCHIVE_HEADER)
+            for fl in new_filings:
+                writer.writerow([
+                    fl.filing_time or "",
+                    fl.ticker or "",
+                    fl.company_name or "",
+                    fl.category or "",
+                    fl.subject or fl.doc_type or "",
+                    fl.protocol or "",
+                    build_download_url(fl),
+                ])
+    except Exception as e:
+        log(f"WARNING: falha ao gravar arquivo histórico: {e}")
 
 
 # ============================================================================
@@ -1014,6 +1045,7 @@ def main() -> int:
                 print(format_new_filings(new_filings, summaries))
 
         if new_filings:
+            archive_filings(new_filings)   # base histórica (registra o que foi detectado)
             email_cfg = load_email_config()
             if email_cfg:
                 send_email_alert(email_cfg, new_filings, summaries)

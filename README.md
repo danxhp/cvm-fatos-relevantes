@@ -63,6 +63,7 @@ para sobreviver entre execuções.
 | `.github/workflows/monitor.yml` | Workflow do GitHub Actions que executa o monitor. |
 | `seen_protocols.json` | "Memória" do que já foi visto. **Autoritativo no GitHub** (o Actions commita de volta). |
 | `send_log.txt` | Registro **durável** de cada envio (email/telegram), separado por ` \| `. Versionado e commitado de volta pelo Actions. |
+| `fatos_arquivo.csv` | **Base histórica** dos fatos relevantes/avisos detectados (`data, ticker, empresa, categoria, assunto, protocolo, link` — sem resumo). CSV, versionado e commitado de volta. Acumula a partir de 2026-07-26. |
 | `email_config.json` | Credenciais SMTP, chave da Anthropic, destinatários, URL do heartbeat, bloco Telegram. **Não versionado** (`.gitignore`); na nuvem é recriado do secret. |
 | `monitor_log.txt` | Log de execução local (texto livre, verboso). **Efêmero na nuvem** — não versionado. |
 | `requirements.txt` | Dependências Python. |
@@ -295,6 +296,10 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
 - **Histórico de envios:** [`send_log.txt`](send_log.txt) tem uma linha por envio (email e
   telegram separados), com `status` `OK`/`FAIL` e detalhe do erro quando falha. É durável (o
   Actions commita de volta), então serve de auditoria: `2026-... | telegram | OK | RDOR3 | ...`.
+- **Base histórica de FRs:** [`fatos_arquivo.csv`](fatos_arquivo.csv) acumula todo fato
+  relevante/aviso detectado (`data, ticker, empresa, categoria, assunto, protocolo, link`). Abre
+  no Excel/Sheets — dá para filtrar por empresa, contar por período, etc. Só metadados + título,
+  sem o resumo do Claude.
 - **Falha silenciosa da CVM:** se a CVM estiver fora, o run passa "verde" mas o heartbeat **não
   pinga**. Uma falha isolada é absorvida pela *grace*; se a CVM ficar fora por vários runs, os
   pings cessam e o healthchecks.io te alerta pelo silêncio.
