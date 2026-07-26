@@ -287,7 +287,7 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
 ## Operação: como saber se está vivo
 
 - **Execuções:** aba *Actions* do repositório, ou `gh run list --workflow=monitor.yml`.
-- **Cadência real:** compare os horários dos runs — devem estar espaçados ~15 min (os disparos do
+- **Cadência real:** compare os horários dos runs — devem estar espaçados ~5 min (os disparos do
   cron-job.org). Runs `event=schedule` esparsos são o backup do GitHub; o principal é
   `event=workflow_dispatch`.
 - **Heartbeat:** o painel do healthchecks.io mostra o último ping; se ficar vermelho, você recebe
@@ -295,8 +295,9 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
 - **Histórico de envios:** [`send_log.txt`](send_log.txt) tem uma linha por envio (email e
   telegram separados), com `status` `OK`/`FAIL` e detalhe do erro quando falha. É durável (o
   Actions commita de volta), então serve de auditoria: `2026-... | telegram | OK | RDOR3 | ...`.
-- **"Verde mas sem checar":** se a CVM estiver fora, o run passa mas o heartbeat recebe um `/fail`,
-  então o healthchecks.io ainda te avisa.
+- **Falha silenciosa da CVM:** se a CVM estiver fora, o run passa "verde" mas o heartbeat **não
+  pinga**. Uma falha isolada é absorvida pela *grace*; se a CVM ficar fora por vários runs, os
+  pings cessam e o healthchecks.io te alerta pelo silêncio.
 
 ---
 

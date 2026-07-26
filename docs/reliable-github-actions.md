@@ -116,35 +116,42 @@ ar, token expirado, fonte de dados indisponível e crash do script.
 **Setup (healthchecks.io, grátis):**
 
 1. Conta em [healthchecks.io](https://healthchecks.io) → **Add Check**.
-2. **Period** = intervalo do cron; **Grace** = folga antes de alertar.
+2. **Period** = intervalo do cron; **Grace** generosa. Regra: `Period + Grace` deve cobrir
+   **~2–3 ciclos** do cron. Ex.: cron de 5 min → Period 5, Grace 10 (ou mais). Isso absorve
+   jitter, runs longos e 1–2 falhas transitórias da fonte **sem alarme falso**.
 3. Copie a **ping URL** (`https://hc-ping.com/<uuid>`).
 4. Alertas vão para o email do cadastro (dá para plugar Slack, etc.).
 
-**No código do job**, ao final de uma execução bem-sucedida, faça um GET na ping URL. Padrão
+**No código do job**, pingue a URL ao final **de uma checagem real** (a fonte respondeu). Padrão
 mínimo (Python, mas a ideia vale para qualquer linguagem/shell):
 
 ```python
 import os, requests
 
-def ping_healthcheck(url: str, fail: bool = False) -> None:
+def ping_healthcheck(url: str) -> None:
     if not url:
         return                       # no-op se não configurado
-    target = url.rstrip("/") + "/fail" if fail else url
     try:
-        requests.get(target, timeout=10)
+        requests.get(url, timeout=10)
     except Exception:
         pass                          # nunca deixe o ping derrubar o job
 
-# ... ao final da execução real:
+# ... ao final da execução:
 hc = os.environ.get("HEALTHCHECK_URL")
-ping_healthcheck(hc, fail=not tudo_ok)   # /fail quando "rodou mas não checou de verdade"
+if hc and fonte_respondeu:           # pinga SÓ quando a checagem foi real
+    ping_healthcheck(hc)
+# Se a fonte falhou (transitório), NÃO pingue. A grace absorve um ping perdido;
+# uma queda sustentada (vários runs sem pingar) para de pingar e dispara o alerta.
 ```
 
-Em shell, o equivalente é `curl -fsS -m 10 --retry 3 "$HEALTHCHECK_URL" || true` (e
-`"$HEALTHCHECK_URL/fail"` no caminho de falha).
+Em shell, o equivalente é `curl -fsS -m 10 --retry 3 "$HEALTHCHECK_URL" || true` (só no caminho
+de sucesso).
 
-**Distinção que dá o maior retorno:** pingar `/fail` quando o job tecnicamente passou mas a fonte
-estava fora. Sem isso, um run "verde" sem trabalho real passa despercebido.
+**⚠️ Não use `/fail` para falhas transitórias.** É tentador pingar `hc-ping.com/<uuid>/fail`
+quando "rodou mas não checou de verdade" — mas isso **derruba o check na hora**, e se a fonte é
+instável (recupera no run seguinte) você recebe uma enxurrada de emails *down/up* (*flapping*).
+O design correto é **"pinga no sucesso, silencia na falha"**: deixe a *grace* distinguir um hiccup
+isolado (ignorado) de uma queda real (vários runs mudos → alerta).
 
 ---
 
@@ -170,8 +177,8 @@ acontece na nuvem.
 - [ ] Fine-grained PAT com `Actions: Read and write` no(s) repo(s) — testado com `curl` (204)
 - [ ] Job no cron externo (cron-job.org / Cloud Scheduler) com URL + método + body + 4 headers
 - [ ] Test run do cron externo retornou `204` e o run apareceu no Actions
-- [ ] Check no healthchecks.io com Period/Grace corretos
-- [ ] Código pinga a URL no sucesso e `/fail` na falha parcial
+- [ ] Check no healthchecks.io com `Period + Grace` cobrindo ~2–3 ciclos do cron
+- [ ] Código pinga a URL **só no sucesso** (silencia na falha transitória — sem `/fail`)
 - [ ] `HEALTHCHECK_URL` (e demais credenciais) nos secrets do repo
 - [ ] Confirmado: um travamento simulado (ou token errado) faz o healthchecks.io alertar
 
