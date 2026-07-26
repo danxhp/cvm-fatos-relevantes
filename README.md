@@ -230,21 +230,29 @@ simplesmente para de receber emails, sem saber se é "não teve fato relevante" 
 O heartbeat inverte a lógica: em vez de esperar o sistema quebrado avisar que quebrou, um vigia
 **externo** alerta você quando o monitor **para de dar sinal de vida**.
 
-Como está implementado no código:
-- ao final de cada checagem real, [`main()`](cvm_fatos_relevantes_claude.py) chama
-  `ping_healthcheck(url, fail=not cvm_ok)`;
-- **sucesso** → pinga a URL base (CVM respondeu);
-- **falha** → pinga `.../fail` (a checagem rodou, mas a CVM estava indisponível);
+Como está implementado no código (ao final de [`main()`](cvm_fatos_relevantes_claude.py)):
+- **CVM respondeu** (`cvm_ok`) → pinga a URL base (sinal de vida);
+- **CVM falhou** (transitório) → **não pinga**. Um ping perdido é absorvido pela *grace*;
+  só uma queda **sustentada** (vários runs seguidos sem pingar) ou um crash disparam o alerta;
 - se o script travar antes disso, **nenhum ping é enviado** → o watchdog alerta pelo silêncio;
 - sem `healthcheck_url` configurado, é um **no-op** (não quebra nada).
 
-Setup (~2 min):
+> **Não use `/fail`** para falhas transitórias da CVM: o endpoint da CVM é instável e se recupera
+> no run seguinte; um `/fail` derruba o check na hora e gera *flapping* (enxurrada de emails
+> "down/up"). Por isso o design é "pinga no sucesso, silencia na falha".
+
+**Configuração do Period/Grace — precisa casar com a cadência real, senão gera flapping.**
+O ping chega a cada ~5 min (a cadência do cron), mas com folga: runs que processam um fato
+relevante demoram mais (download + resumo do Claude + envio), e "pular" um ping numa falha
+transitória cria um intervalo de ~2 ciclos. Regra: **`Period + Grace` deve cobrir ~2–3 ciclos.**
 
 1. Crie conta grátis em [healthchecks.io](https://healthchecks.io).
-2. **Add Check** → **Period = 15 min** (igual ao cron), **Grace = ~5 min**.
+2. **Add Check** → **Period = 5 min** (igual ao cron), **Grace = 10 min**
+   (tolera jitter, runs longos e 1–2 falhas transitórias sem alarme falso).
 3. Copie a **ping URL** (`https://hc-ping.com/<uuid>`) → coloque em `healthcheck_url`
    (no `email_config.json` local **e** no secret — ver abaixo).
-4. Os alertas vão para o email do cadastro por padrão.
+4. Os alertas vão para o email do cadastro (⚠️ *o email da conta healthchecks.io, que pode ser
+   diferente do de destino dos fatos relevantes*).
 
 ### 4. Secrets necessários
 

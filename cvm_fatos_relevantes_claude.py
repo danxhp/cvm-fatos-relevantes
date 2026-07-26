@@ -554,15 +554,10 @@ def get_healthcheck_url() -> Optional[str]:
     return None
 
 
-def ping_healthcheck(url: str, fail: bool = False) -> None:
-    """
-    Sinaliza vida ao watchdog externo. fail=True pinga o endpoint /fail
-    (checagem rodou mas a fonte estava indisponível). Nunca deixa o monitor
-    quebrar por causa do ping.
-    """
-    target = url.rstrip("/") + "/fail" if fail else url
+def ping_healthcheck(url: str) -> None:
+    """Sinaliza vida ao watchdog externo. Nunca deixa o monitor quebrar pelo ping."""
     try:
-        requests.get(target, timeout=10)
+        requests.get(url, timeout=10)
     except Exception as e:
         log(f"WARNING: heartbeat ping falhou: {e}")
 
@@ -1026,13 +1021,14 @@ def main() -> int:
             if tg_cfg:
                 send_telegram_alert(tg_cfg, new_filings, summaries)
 
-        # Heartbeat / dead-man's-switch: sinaliza que uma checagem real ocorreu.
-        # Sucesso quando a CVM respondeu; /fail quando ela ficou indisponível
-        # (o run "verde" mascararia isso). Se o script travar antes daqui, nenhum
-        # ping é enviado e o watchdog externo alerta pelo silêncio.
+        # Heartbeat / dead-man's-switch: pinga só quando a checagem foi real
+        # (CVM respondeu). Numa falha transitória da CVM NÃO pingamos — a "grace"
+        # do healthchecks absorve um ping perdido; só uma queda *sustentada*
+        # (vários runs seguidos sem pingar) ou um crash disparam o alerta. Isso
+        # evita o flapping que o /fail causava a cada hiccup da CVM.
         hc_url = get_healthcheck_url()
-        if hc_url:
-            ping_healthcheck(hc_url, fail=not cvm_ok)
+        if hc_url and cvm_ok:
+            ping_healthcheck(hc_url)
 
         return 0
 
