@@ -1,1 +1,3 @@
 timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
+2026-07-30 10:05:25 | email | OK | AFYA | 0001292814-26-003962 | SEC 6-K | 6-K | 
+2026-07-30 10:05:26 | telegram | OK | AFYA | 0001292814-26-003962 | SEC 6-K | 6-K | 
