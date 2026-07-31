@@ -3,3 +3,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-07-30 10:05:26 | telegram | OK | AFYA | 0001292814-26-003962 | SEC 6-K | 6-K | 
 2026-07-30 12:05:33 | email | OK | ONCO3 | 1549576 | Aviso aos Acionistas | Alteração no exercício do bônus de subscrição. | 
 2026-07-30 12:05:34 | telegram | OK | ONCO3 | 1549576 | Aviso aos Acionistas | Alteração no exercício do bônus de subscrição. | 
+2026-07-31 22:50:21 | email | OK | VIVT3 | 1550766 | Fato Relevante | Incorporação Fibrasil | 
+2026-07-31 22:50:22 | telegram | OK | VIVT3 | 1550766 | Fato Relevante | Incorporação Fibrasil | 
