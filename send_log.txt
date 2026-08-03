@@ -5,3 +5,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-07-30 12:05:34 | telegram | OK | ONCO3 | 1549576 | Aviso aos Acionistas | Alteração no exercício do bônus de subscrição. | 
 2026-07-31 22:50:21 | email | OK | VIVT3 | 1550766 | Fato Relevante | Incorporação Fibrasil | 
 2026-07-31 22:50:22 | telegram | OK | VIVT3 | 1550766 | Fato Relevante | Incorporação Fibrasil | 
+2026-08-03 12:55:25 | email | OK | ONCO3 | 1550853 | Fato Relevante | Formalização Venda de Participação (Arábia Saudita) | 
+2026-08-03 12:55:25 | telegram | OK | ONCO3 | 1550853 | Fato Relevante | Formalização Venda de Participação (Arábia Saudita) | 
