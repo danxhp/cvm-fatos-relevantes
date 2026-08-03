@@ -7,3 +7,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-07-31 22:50:22 | telegram | OK | VIVT3 | 1550766 | Fato Relevante | Incorporação Fibrasil | 
 2026-08-03 12:55:25 | email | OK | ONCO3 | 1550853 | Fato Relevante | Formalização Venda de Participação (Arábia Saudita) | 
 2026-08-03 12:55:25 | telegram | OK | ONCO3 | 1550853 | Fato Relevante | Formalização Venda de Participação (Arábia Saudita) | 
+2026-08-03 13:00:39 | email | OK | ONCO3 | 1550854 | Fato Relevante | Acordo Unimed | 
+2026-08-03 13:00:40 | telegram | OK | ONCO3 | 1550854 | Fato Relevante | Acordo Unimed | 
