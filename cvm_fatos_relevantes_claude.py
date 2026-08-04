@@ -886,25 +886,46 @@ def send_email_alert(
 
 def get_telegram_config() -> Optional[Dict]:
     """
-    Retorna {'bot_token', 'chat_id'} se o Telegram estiver habilitado, senão None.
-    Lê das envs TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID ou do bloco "telegram"
-    em email_config.json ({"enabled": true, "bot_token": "...", "chat_id": ...}).
+    Retorna {'destinations': [{'bot_token', 'chat_id'}, ...]} se habilitado, senão None.
+    Cada destino tem seu próprio bot (permite pessoas diferentes com bots diferentes).
+    Fontes, em ordem:
+      - envs TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID (destino único), ou
+      - bloco "telegram" em email_config.json, no formato novo
+        {"enabled": true, "destinations": [{"bot_token": "...", "chat_id": ...}, ...]}
+        ou no formato antigo {"enabled": true, "bot_token": "...", "chat_id": ...}.
     """
-    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-    if not (bot_token and chat_id) and EMAIL_CONFIG_FILE.exists():
+    def _dest(bt, ci) -> Optional[Dict]:
+        if bt and ci not in (None, ""):
+            return {"bot_token": str(bt).strip(), "chat_id": str(ci).strip()}
+        return None
+
+    destinations: List[Dict] = []
+
+    env = _dest(os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID"))
+    if env:
+        destinations.append(env)
+
+    if not destinations and EMAIL_CONFIG_FILE.exists():
         try:
             with open(EMAIL_CONFIG_FILE, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
             tg = cfg.get("telegram") or {}
             if tg.get("enabled"):
-                bot_token = bot_token or tg.get("bot_token")
-                chat_id = chat_id or tg.get("chat_id")
+                if isinstance(tg.get("destinations"), list):
+                    for d in tg["destinations"]:
+                        dest = _dest(d.get("bot_token"), d.get("chat_id"))
+                        if dest:
+                            destinations.append(dest)
+                else:  # formato antigo (destino único)
+                    dest = _dest(tg.get("bot_token"), tg.get("chat_id"))
+                    if dest:
+                        destinations.append(dest)
         except Exception as e:
             log(f"WARNING: failed to load telegram config: {e}")
-    if not bot_token or chat_id in (None, ""):
+
+    if not destinations:
         return None
-    return {"bot_token": str(bot_token).strip(), "chat_id": str(chat_id).strip()}
+    return {"destinations": destinations}
 
 
 def _render_filing_telegram(filing: Filing, bullets: Optional[List[str]]) -> str:
@@ -929,23 +950,27 @@ def _render_filing_telegram(filing: Filing, bullets: Optional[List[str]]) -> str
 
 
 def _send_one_telegram(cfg: Dict, filing: Filing, bullets: Optional[List[str]]) -> bool:
-    api_url = f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage"
-    payload = {
-        "chat_id": cfg["chat_id"],
-        "text": _render_filing_telegram(filing, bullets),
-        "parse_mode": "HTML",
-        "disable_web_page_preview": True,
-    }
-    try:
-        r = requests.post(api_url, json=payload, timeout=30)
-        r.raise_for_status()
-        log(f"Telegram enviado: {filing.identifier}")
-        log_send("telegram", filing, True)
-        return True
-    except Exception as ex:
-        log(f"ERROR ao enviar Telegram para {filing.identifier}: {ex}")
-        log_send("telegram", filing, False, str(ex))
-        return False
+    text = _render_filing_telegram(filing, bullets)
+    ok_all = True
+    for dest in cfg["destinations"]:
+        chat_id = dest["chat_id"]
+        api_url = f"https://api.telegram.org/bot{dest['bot_token']}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }
+        try:
+            r = requests.post(api_url, json=payload, timeout=30)
+            r.raise_for_status()
+            log(f"Telegram enviado (chat {chat_id}): {filing.identifier}")
+            log_send("telegram", filing, True, f"chat {chat_id}")
+        except Exception as ex:
+            log(f"ERROR ao enviar Telegram (chat {chat_id}) para {filing.identifier}: {ex}")
+            log_send("telegram", filing, False, f"chat {chat_id}: {ex}")
+            ok_all = False
+    return ok_all
 
 
 def send_telegram_alert(

@@ -106,8 +106,10 @@ Na primeira execução, um template é criado automaticamente. Preencha:
   "healthcheck_url": "https://hc-ping.com/SEU-UUID",
   "telegram": {
     "enabled": true,
-    "bot_token": "123456789:AA...",
-    "chat_id": 123456789
+    "destinations": [
+      {"bot_token": "111:AA...", "chat_id": 123},
+      {"bot_token": "222:BB...", "chat_id": 456}
+    ]
   }
 }
 ```
@@ -127,14 +129,19 @@ Na primeira execução, um template é criado automaticamente. Preencha:
 
 ### Alertas no Telegram (opcional)
 
-Além do email, cada fato relevante pode ser enviado para um chat do Telegram via bot. É o mesmo
-resumo (bullets do Claude) numa mensagem formatada, com link para o documento.
+Além do email, cada fato relevante é enviado para um ou mais destinos no Telegram. Cada destino é
+um par **bot + chat** próprio (`destinations`), então pessoas diferentes podem receber pelo **seu
+próprio bot**. É o mesmo resumo (bullets do Claude), formatado, com link para o documento.
 
 1. Crie um bot com o [@BotFather](https://t.me/BotFather) e copie o **bot token**.
-2. Descubra o **chat_id** de destino (mande uma mensagem ao bot e consulte
-   `https://api.telegram.org/bot<TOKEN>/getUpdates`, ou use um bot como `@userinfobot`).
+2. Descubra o **chat_id** de destino: o destinatário manda **qualquer mensagem ao bot primeiro**
+   (bots não podem iniciar conversa), depois consulte
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` e pegue o `message.chat.id`.
    Chat privado = id positivo; grupo/canal = id negativo.
-3. Preencha o bloco `telegram` no config e teste:
+3. Adicione um objeto `{"bot_token": "...", "chat_id": ...}` por destino em `telegram.destinations`
+   e teste (envia para **todos** os destinos):
+
+> Formato antigo `{"bot_token": "...", "chat_id": ...}` (destino único) ainda é aceito.
 
 ```bash
 python cvm_fatos_relevantes_claude.py --test-telegram
