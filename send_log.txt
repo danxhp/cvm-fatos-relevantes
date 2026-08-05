@@ -13,3 +13,6 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-03 20:25:26 | email | OK | ONCO3 | 1551076 | Fato Relevante | Formalização Venda de Participação (Arábia Saudita) | 
 2026-08-03 20:25:26 | telegram | OK | ONCO3 | 1551077 | Fato Relevante | Acordo Unimed | 
 2026-08-03 20:25:27 | telegram | OK | ONCO3 | 1551076 | Fato Relevante | Formalização Venda de Participação (Arábia Saudita) | 
+2026-08-05 12:20:25 | email | OK | ONCO3 | 1552285 | Fato Relevante | Deferimento do Pedido de Recuperação Extrajudicial | 
+2026-08-05 12:20:25 | telegram | OK | ONCO3 | 1552285 | Fato Relevante | Deferimento do Pedido de Recuperação Extrajudicial | chat 1496332324
+2026-08-05 12:20:26 | telegram | OK | ONCO3 | 1552285 | Fato Relevante | Deferimento do Pedido de Recuperação Extrajudicial | chat 8369248929
