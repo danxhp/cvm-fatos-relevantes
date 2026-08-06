@@ -1,10 +1,14 @@
 # cvm-fatos-relevantes
 
-Monitora **Fatos Relevantes** e **Avisos aos Acionistas** de empresas brasileiras listadas
-(setor saúde/educação/telecom) na CVM, e formulários equivalentes (6-K/20-F/8-K) na SEC para
-emissoras listadas no exterior (ex.: Afya). Gera **resumos automáticos com Claude** e envia
-**alertas por email** assim que um novo documento é publicado.
+Monitora, na CVM, várias categorias de documentos de empresas brasileiras listadas
+(setor saúde/educação/telecom) — **Fato Relevante**, **Aviso aos Acionistas**,
+**Comunicado ao Mercado**, **ITR - Informações Trimestrais** e **Dados Econômico-Financeiros** —
+e formulários equivalentes (6-K/20-F/8-K) na SEC para emissoras listadas no exterior (ex.: Afya).
+Gera **resumos automáticos com Claude** e envia **alertas por email e Telegram** assim que um novo
+documento é publicado.
 
+- Categorias monitoradas: definidas em `CVM_ALLOWED_CATEGORIES` no script (buscamos **todas** as
+  categorias numa requisição e filtramos por nome — para incluir/remover, edite esse conjunto).
 - Fonte CVM: endpoint interno do RAD/CVM (`frmConsultaExternaCVM.aspx/ListarDocumentos`)
 - Fonte SEC: API oficial `data.sec.gov`
 - Deduplicação por protocolo/accession — silencioso quando não há nada novo

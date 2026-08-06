@@ -60,12 +60,18 @@ LIST_URL = BASE_URL + "frmConsultaExternaCVM.aspx/ListarDocumentos"
 DOWNLOAD_URL = BASE_URL + "frmDownloadDocumento.aspx"
 CONSULTA_URL = BASE_URL + "frmConsultaExternaCVM.aspx"
 
-# Categorias monitoradas na CVM (IPE).
-# IPE_4 = Fato Relevante, IPE_3 = Aviso aos Acionistas.
-CVM_CATEGORIES = [
-    ("IPE_4_-1_-1", "Fato Relevante"),
-    ("IPE_3_-1_-1", "Aviso aos Acionistas"),
-]
+# Categorias monitoradas na CVM. Em vez de uma requisição por código de categoria,
+# buscamos TODAS as categorias numa requisição (categoria="") e filtramos localmente
+# por nome — assim cobrimos categorias fora da família "IPE" (ex.: ITR, que o filtro
+# IPE não retorna). Para incluir/remover uma categoria, edite este conjunto.
+CVM_ALL_CATEGORIES = ""  # valor de "categoria" que retorna todos os documentos
+CVM_ALLOWED_CATEGORIES = {
+    "Fato Relevante",
+    "Aviso aos Acionistas",
+    "Comunicado ao Mercado",
+    "ITR - Informações Trimestrais",
+    "Dados Econômico-Financeiros",
+}
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -334,9 +340,12 @@ def parse_rows(raw: str) -> List[Filing]:
         if cvm_code not in COMPANY_CODES:
             continue
 
+        category = strip_html(cols[2])
+        if category not in CVM_ALLOWED_CATEGORIES:
+            continue
+
         company_cfg = COMPANY_CODES[cvm_code]
         company_name = strip_html(cols[1])
-        category = strip_html(cols[2])
         doc_type = strip_html(cols[3])
         subject = strip_html(cols[11]) if len(cols) > 11 else ""
 
@@ -462,16 +471,16 @@ def build_download_url(filing: Filing) -> str:
 
 def gather_all_filings(session: requests.Session) -> Tuple[List[Filing], bool]:
     filings: List[Filing] = []
-    cvm_ok = False  # True se ao menos uma categoria da CVM respondeu sem erro
+    cvm_ok = False  # True se a CVM respondeu sem erro
 
-    # CVM (B3-listed issuers) — Fato Relevante + Aviso aos Acionistas
-    for cat_code, cat_label in CVM_CATEGORIES:
-        try:
-            raw = fetch_raw_documents(session, cat_code)
-            filings.extend(parse_rows(raw))
-            cvm_ok = True
-        except Exception as e:
-            log(f"WARNING: CVM fetch failed para {cat_label}: {e}")
+    # CVM: uma requisição com todas as categorias; parse_rows filtra por empresa
+    # monitorada E categoria de interesse (CVM_ALLOWED_CATEGORIES).
+    try:
+        raw = fetch_raw_documents(session, CVM_ALL_CATEGORIES)
+        filings.extend(parse_rows(raw))
+        cvm_ok = True
+    except Exception as e:
+        log(f"WARNING: CVM fetch failed: {e}")
 
     # SEC EDGAR (Afya and any other foreign-listed)
     for company in COMPANIES:
