@@ -1,5 +1,7 @@
 email_config.json
 monitor_log.txt
+earnings_watch_log.txt
+earnings_watch_seen.json
 monitor_log_simples.txt
 seen_protocols_simples.json
 cvm_fatos_relevantes_simples.py

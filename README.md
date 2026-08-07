@@ -29,6 +29,7 @@ documento é publicado.
   - [4. Secrets necessários](#4-secrets-necessários)
 - [Operação: como saber se está vivo](#operação-como-saber-se-está-vivo)
 - [Reaproveitar este método em outros monitores](#reaproveitar-este-método-em-outros-monitores)
+- [Watcher pontual de resultados (`earnings_watch.py`)](#watcher-pontual-de-resultados-earnings_watchpy)
 
 ---
 
@@ -70,6 +71,8 @@ para sobreviver entre execuções.
 | `fatos_arquivo.csv` | **Base histórica** dos fatos relevantes/avisos detectados (`data, ticker, empresa, categoria, assunto, protocolo, link` — sem resumo). CSV, versionado e commitado de volta. Acumula a partir de 2026-07-26. |
 | `email_config.json` | Credenciais SMTP, chave da Anthropic, destinatários, URL do heartbeat, bloco Telegram. **Não versionado** (`.gitignore`); na nuvem é recriado do secret. |
 | `monitor_log.txt` | Log de execução local (texto livre, verboso). **Efêmero na nuvem** — não versionado. |
+| `earnings_watch.py` | **Watcher pontual de resultados** — standalone, roda local, reaproveita o fetch/parse do monitor. Vigia tickers/categoria específicos de minuto a minuto e avisa só no Telegram. Ver [seção dedicada](#watcher-pontual-de-resultados-earnings_watchpy). |
+| `earnings_watch_seen.json` / `earnings_watch_log.txt` | Estado (protocolos já entregues) e log do watcher. **Não versionados** (`.gitignore`). |
 | `requirements.txt` | Dependências Python. |
 
 ---
@@ -323,3 +326,53 @@ O padrão **disparo externo + heartbeat** é genérico e se aplica a qualquer jo
 Actions. Veja o playbook portátil em
 **[`docs/reliable-github-actions.md`](docs/reliable-github-actions.md)** — passo a passo para
 levar qualquer repositório com `schedule:` para uma cadência confiável e observável.
+
+---
+
+## Watcher pontual de resultados (`earnings_watch.py`)
+
+Ferramenta **standalone** para dias de divulgação de resultados: vigia uma categoria e um conjunto
+de tickers específicos, **de minuto a minuto**, e avisa **só no Telegram** (nada de email). Roda
+**local** (não no GitHub Actions) e reaproveita o fetch/parse do monitor principal
+(`import cvm_fatos_relevantes_claude`).
+
+Feito originalmente para pegar o **2T26** de FLRY3 e HYPE3 (categoria *Dados Econômico-Financeiros*),
+mandando só para um chat.
+
+### Comportamento
+
+- **Entrega os documentos com data de hoje** da categoria/tickers alvo — inclusive os que já tinham
+  saído quando o watcher começou (a divulgação costuma ser um lote de 2–3 docs em poucos minutos:
+  DF PT, DF inglês, press-release).
+- **Dedup por protocolo, com estado persistido** (`earnings_watch_seen.json`): reiniciar o script
+  **não reenvia** o que já foi mandado (sobrevive a crash/restart).
+- **Só marca como entregue após o envio dar certo** — uma falha transitória do Telegram é
+  **retentada** no minuto seguinte (não perde o alerta).
+- **Para sozinho à meia-noite** (horário local). Quando todos os tickers já saíram, avisa uma vez e
+  **segue vigiando até a meia-noite** (para não perder complementos do lote); não para cedo.
+- **Destino único e explícito:** envia sempre e somente para o `TARGET_CHAT_ID` definido no topo; o
+  `bot_token` é lido do `email_config.json` (não fica hardcoded). Não há caminho para email nem para
+  outros destinatários.
+
+### Uso
+
+```bash
+py earnings_watch.py            # inicia o watcher (roda até meia-noite ou até todos saírem)
+py earnings_watch.py --once     # uma checagem só: lista o estado atual, NÃO envia nada
+py earnings_watch.py --test     # manda um Telegram de teste para o chat alvo e sai
+```
+
+### Reaproveitar no próximo trimestre
+
+Edite o bloco de config no topo do script e rode de novo:
+
+```python
+WATCH_TICKERS  = {"FLRY3", "HYPE3"}                 # empresas a vigiar
+WATCH_CATEGORY = "Dados Econômico-Financeiros"      # categoria alvo (nome exato da CVM)
+WATCH_LABEL    = "Resultados 2T26"                  # texto do cabeçalho da mensagem
+TARGET_CHAT_ID = "1496332324"                       # único destino no Telegram
+POLL_SECONDS   = 60                                 # de minuto a minuto
+```
+
+> Para um começo limpo, apague `earnings_watch_seen.json` antes de rodar (opcional — protocolos de
+> trimestres antigos não colidem com os novos, mas o arquivo cresce).
