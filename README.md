@@ -336,8 +336,8 @@ de tickers específicos, **de minuto a minuto**, e avisa **só no Telegram** (na
 **local** (não no GitHub Actions) e reaproveita o fetch/parse do monitor principal
 (`import cvm_fatos_relevantes_claude`).
 
-Feito originalmente para pegar o **2T26** de FLRY3 e HYPE3 (categoria *Dados Econômico-Financeiros*),
-mandando só para um chat.
+Já foi usado para o **2T26** de FLRY3/HYPE3 e está configurado para o **2T26 da BLAU3** (categoria
+*Dados Econômico-Financeiros*).
 
 ### Comportamento
 
@@ -350,29 +350,44 @@ mandando só para um chat.
   **retentada** no minuto seguinte (não perde o alerta).
 - **Para sozinho à meia-noite** (horário local). Quando todos os tickers já saíram, avisa uma vez e
   **segue vigiando até a meia-noite** (para não perder complementos do lote); não para cedo.
-- **Destino único e explícito:** envia sempre e somente para o `TARGET_CHAT_ID` definido no topo; o
-  `bot_token` é lido do `email_config.json` (não fica hardcoded). Não há caminho para email nem para
-  outros destinatários.
+- **Destinos = `email_config.json`:** envia para **todos** os `telegram.destinations` (hoje: Danilo
+  + Enzo), cada um pelo seu próprio bot — os mesmos destinos do monitor principal. Dedup é **por
+  (protocolo, chat)**: cada pessoa recebe cada doc uma vez, e uma falha de envio é retentada só para
+  quem faltou. Nunca envia email.
 
 ### Uso
 
 ```bash
 py earnings_watch.py            # inicia o watcher (roda até meia-noite ou até todos saírem)
 py earnings_watch.py --once     # uma checagem só: lista o estado atual, NÃO envia nada
-py earnings_watch.py --test     # manda um Telegram de teste para o chat alvo e sai
+py earnings_watch.py --test     # manda um Telegram de teste para TODOS os destinos e sai
 ```
 
 ### Reaproveitar no próximo trimestre
 
-Edite o bloco de config no topo do script e rode de novo:
+Edite o bloco de config no topo do script e rode de novo. Quem recebe é controlado pelo
+`email_config.json` (`telegram.destinations`), não pelo script.
 
 ```python
-WATCH_TICKERS  = {"FLRY3", "HYPE3"}                 # empresas a vigiar
+WATCH_TICKERS  = {"BLAU3"}                          # empresas a vigiar
 WATCH_CATEGORY = "Dados Econômico-Financeiros"      # categoria alvo (nome exato da CVM)
 WATCH_LABEL    = "Resultados 2T26"                  # texto do cabeçalho da mensagem
-TARGET_CHAT_ID = "1496332324"                       # único destino no Telegram
 POLL_SECONDS   = 60                                 # de minuto a minuto
 ```
 
-> Para um começo limpo, apague `earnings_watch_seen.json` antes de rodar (opcional — protocolos de
-> trimestres antigos não colidem com os novos, mas o arquivo cresce).
+> Antes de um novo alvo, zere `earnings_watch_seen.json` (`echo [] > earnings_watch_seen.json`).
+
+### Agendar para um dia específico (Windows)
+
+O watcher roda até a meia-noite **do dia em que começa**, então para um resultado futuro agende o
+início via Task Scheduler. Exemplo real (BLAU3 2T26, divulga 11/08 after-market → início 17:30):
+
+```powershell
+$action  = New-ScheduledTaskAction -Execute 'C:\Windows\py.exe' -Argument 'C:\dev\GS\CVM_Fatos_relevantes\earnings_watch.py' -WorkingDirectory 'C:\dev\GS\CVM_Fatos_relevantes'
+$trigger = New-ScheduledTaskTrigger -Once -At '2026-08-11T17:30:00'
+$settings = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 9)
+Register-ScheduledTask -TaskName 'BlauEarningsWatch_2T26' -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force
+```
+
+O PC precisa estar ligado ou suspenso (a tarefa o acorda) — não desligado. Consultar/remover:
+`Get-ScheduledTask BlauEarningsWatch_2T26` · `Unregister-ScheduledTask BlauEarningsWatch_2T26 -Confirm:$false`.

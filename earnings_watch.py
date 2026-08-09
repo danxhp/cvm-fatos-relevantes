@@ -4,21 +4,23 @@
 earnings_watch.py — vigia pontual de resultados na CVM (categoria "Dados Econômico-Financeiros").
 
 Baseado no monitor principal: importa o fetch/parse de cvm_fatos_relevantes_claude.py.
-Roda de minuto a minuto, avisa APENAS no Telegram e APENAS no chat alvo (o Danilo — o
-chat do Enzo NÃO é referenciado neste arquivo, de propósito). Não envia email.
-Para sozinho à meia-noite (horário local) — ou antes, se capturar todas as empresas.
+Roda de minuto a minuto e avisa APENAS no Telegram (não envia email). Os destinos são
+lidos de email_config.json (bloco telegram.destinations) — os mesmos do monitor principal,
+ou seja, TODOS os configurados recebem (hoje: Danilo + Enzo). Dedup é por (protocolo, chat),
+então cada pessoa recebe cada doc uma vez e uma falha de envio é retentada só para quem faltou.
+Para sozinho à meia-noite (horário local).
 
 Uso:
-    py earnings_watch.py            # inicia o watcher (roda até meia-noite ou até capturar tudo)
+    py earnings_watch.py            # inicia o watcher (roda até meia-noite)
     py earnings_watch.py --once     # uma checagem só (mostra o estado atual; NÃO envia nada)
-    py earnings_watch.py --test     # manda um Telegram de teste pro chat alvo e sai
+    py earnings_watch.py --test     # manda um Telegram de teste para todos os destinos e sai
 
 Reaproveitar no próximo trimestre: ajuste WATCH_TICKERS e WATCH_LABEL abaixo e rode de novo.
+Quem recebe é controlado por email_config.json (telegram.destinations).
 """
 from __future__ import annotations
 
 import html
-import json
 import sys
 import time
 from datetime import datetime, timedelta
@@ -28,19 +30,20 @@ import requests
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url
+import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"FLRY3", "HYPE3"}                 # empresas a vigiar
+WATCH_TICKERS  = {"BLAU3"}                          # empresas a vigiar
 WATCH_CATEGORY = "Dados Econômico-Financeiros"      # categoria do release de resultados
 WATCH_LABEL    = "Resultados 2T26"                  # texto no cabeçalho da mensagem
-TARGET_CHAT_ID = "1496332324"                       # SÓ este chat (o Danilo). NÃO enviar ao Enzo.
 POLL_SECONDS   = 60                                 # de minuto a minuto
+# Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
 
 LOG_FILE = SCRIPT_DIR / "earnings_watch_log.txt"
-SEEN_FILE = SCRIPT_DIR / "earnings_watch_seen.json"   # protocolos já ENTREGUES (persiste entre restarts)
-EMAIL_CONFIG_FILE = SCRIPT_DIR / "email_config.json"
+SEEN_FILE = SCRIPT_DIR / "earnings_watch_seen.json"   # chaves "protocolo|chat" já ENTREGUES (persiste)
+
+import json
 
 
 def log(msg: str) -> None:
@@ -53,36 +56,35 @@ def log(msg: str) -> None:
         pass
 
 
-def load_bot_token(chat_id: str) -> str:
-    """Lê o bot_token do email_config.json para o chat alvo (não hardcoda o segredo)."""
-    with open(EMAIL_CONFIG_FILE, encoding="utf-8") as f:
-        cfg = json.load(f)
-    tg = cfg.get("telegram", {}) or {}
-    for d in (tg.get("destinations") or []):
-        if str(d.get("chat_id")) == str(chat_id):
-            return str(d["bot_token"]).strip()
-    if str(tg.get("chat_id")) == str(chat_id):      # formato antigo (destino único)
-        return str(tg.get("bot_token")).strip()
-    raise RuntimeError(f"bot_token do chat {chat_id} não encontrado em email_config.json")
+def load_destinations() -> list:
+    """Todos os destinos de Telegram (email_config.json → telegram.destinations).
+    Cada um: {'bot_token', 'chat_id'}. Reaproveita a config do monitor principal."""
+    tg = cvm.get_telegram_config()   # {"destinations": [...]} ou None
+    return list((tg or {}).get("destinations") or [])
 
 
-BOT_TOKEN = load_bot_token(TARGET_CHAT_ID)
+DESTINATIONS = load_destinations()
 
 
-def send_telegram(text: str) -> bool:
-    """Envia SEMPRE e SOMENTE para TARGET_CHAT_ID."""
+def _post(bot_token: str, chat_id, text: str) -> bool:
     try:
         r = requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={"chat_id": TARGET_CHAT_ID, "text": text[:4000],
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={"chat_id": chat_id, "text": text[:4000],
                   "parse_mode": "HTML", "disable_web_page_preview": True},
             timeout=30,
         )
         r.raise_for_status()
         return True
     except Exception as e:
-        log(f"ERRO ao enviar Telegram: {e}")
+        log(f"ERRO Telegram (chat {chat_id}): {e}")
         return False
+
+
+def broadcast(text: str) -> None:
+    """Mensagem avulsa (início/resumo/teste) para TODOS os destinos."""
+    for d in DESTINATIONS:
+        _post(d["bot_token"], d["chat_id"], text)
 
 
 def fetch_watch_filings(session) -> list:
@@ -107,6 +109,10 @@ def _is_today(f, today_str: str) -> bool:
     return (f.filing_time or "").strip().startswith(today_str)
 
 
+def _keys_for(f) -> list:
+    return [f"{f.protocol}|{d['chat_id']}" for d in DESTINATIONS]
+
+
 def load_seen() -> set:
     try:
         with open(SEEN_FILE, encoding="utf-8") as f:
@@ -124,30 +130,34 @@ def save_seen(seen: set) -> None:
 
 
 def run_watch() -> int:
+    if not DESTINATIONS:
+        log("ERRO: nenhum destino de Telegram em email_config.json (telegram.destinations). Abortando.")
+        return 1
+
     start = datetime.now()
     today_str = start.strftime("%d/%m/%Y")
     midnight = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-    log(f"Watcher iniciado. Vigiando {sorted(WATCH_TICKERS)} | categoria '{WATCH_CATEGORY}' | hoje={today_str}.")
-    log(f"Encerra automaticamente à meia-noite: {midnight:%Y-%m-%d %H:%M}.")
+    chats = ", ".join(str(d["chat_id"]) for d in DESTINATIONS)
+    log(f"Watcher iniciado. Vigiando {sorted(WATCH_TICKERS)} | '{WATCH_CATEGORY}' | hoje={today_str}.")
+    log(f"Destinos ({len(DESTINATIONS)}): {chats}. Encerra à meia-noite: {midnight:%Y-%m-%d %H:%M}.")
 
-    seen = load_seen()          # protocolos JÁ ENTREGUES (persistido — sobrevive a restart)
-    triggered: set = set()      # tickers com pelo menos um doc entregue hoje
-    announced_both = False
+    seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
+    triggered: set = set()      # tickers com pelo menos um doc entregue a TODOS os destinos
+    announced_done = False
 
-    # Reconciliação de restart: se docs de hoje já estão em seen (entregues antes),
-    # marca o ticker como entregue SEM reenviar — mantém relatório/anúncio corretos.
+    # Reconciliação de restart: ticker cujos docs de hoje já foram entregues a todos (sem reenviar)
     try:
         for f in fetch_watch_filings(cvm.make_session()):
-            if _is_today(f, today_str) and f.protocol in seen:
+            if _is_today(f, today_str) and all(k in seen for k in _keys_for(f)):
                 triggered.add(f.ticker)
     except Exception as e:
         log(f"WARNING: reconciliação inicial falhou: {e}")
     if triggered:
         log(f"Reconciliação: já entregues hoje (não reenvio): {sorted(triggered)}")
     if triggered == WATCH_TICKERS:
-        announced_both = True
+        announced_done = True
 
-    send_telegram(
+    broadcast(
         f"🟢 <b>Watcher {html.escape(WATCH_LABEL)} iniciado</b>\n"
         f"Vigiando <b>{', '.join(sorted(WATCH_TICKERS))}</b> (categoria {html.escape(WATCH_CATEGORY)}) "
         f"de minuto a minuto. Envio os docs de hoje e sigo até a meia-noite ({midnight:%H:%M})."
@@ -157,58 +167,69 @@ def run_watch() -> int:
         now = datetime.now()
         if now >= midnight:
             faltou = sorted(WATCH_TICKERS - triggered)
-            send_telegram(
+            broadcast(
                 "🌙 <b>Watcher encerrado (meia-noite).</b>\n"
                 + (f"Capturados hoje: {', '.join(sorted(triggered))}.\n" if triggered else "Nada capturado hoje.\n")
-                + (f"Não saiu: {', '.join(faltou)}." if faltou else "Todas saíram. ✅")
+                + (f"Não saiu: {', '.join(faltou)}." if faltou else "Tudo capturado. ✅")
             )
             log(f"Encerrado à meia-noite. Triggered={sorted(triggered)} Faltou={faltou}")
             return 0
 
         try:
-            # Entrega qualquer doc da categoria alvo COM DATA DE HOJE, dedup por protocolo.
-            # BUGFIX: só marca 'seen'/'triggered' se o envio deu certo — assim uma falha
-            # transitória do Telegram é RETENTADA no próximo minuto (não perde nem para cedo).
+            # Entrega docs da categoria alvo COM DATA DE HOJE, dedup por (protocolo, chat).
+            # Só marca a chave como entregue se o envio deu certo — falha de um destino é
+            # RETENTADA no próximo minuto só para ele (os que já receberam não recebem de novo).
             for f in fetch_watch_filings(cvm.make_session()):
-                if f.protocol in seen:
-                    continue
                 if not _is_today(f, today_str):
                     continue
-                ok = send_telegram(render(f))
-                if ok:
-                    seen.add(f.protocol)
-                    save_seen(seen)
+                keys = _keys_for(f)
+                if all(k in seen for k in keys):
+                    continue  # já entregue a todos
+                text = render(f)
+                for d in DESTINATIONS:
+                    key = f"{f.protocol}|{d['chat_id']}"
+                    if key in seen:
+                        continue
+                    if _post(d["bot_token"], d["chat_id"], text):
+                        seen.add(key)
+                        save_seen(seen)
+                        log(f"ENTREGUE {f.ticker} | {(f.subject or f.doc_type)} | proto {f.protocol} | {f.filing_time} -> chat {d['chat_id']}")
+                    else:
+                        log(f"FALHA {f.ticker} | proto {f.protocol} -> chat {d['chat_id']} (retento no próximo minuto)")
+                if all(k in seen for k in keys):
                     triggered.add(f.ticker)
-                    log(f"TRIGGER {f.ticker} | {(f.subject or f.doc_type)} | protocolo {f.protocol} | {f.filing_time} | telegram=OK")
-                else:
-                    log(f"FALHA no envio de {f.ticker} | protocolo {f.protocol} — retento no próximo minuto")
         except Exception as e:
             log(f"WARNING: erro no poll (segue no próximo minuto): {e}")
 
-        # Aviso ÚNICO quando ambos saíram — mas NÃO paramos: seguimos até a meia-noite
+        # Aviso ÚNICO quando tudo saiu — mas NÃO paramos: seguimos até a meia-noite
         # para não perder complementos do lote (DF/ITR que saem minutos depois).
-        if triggered == WATCH_TICKERS and not announced_both:
-            announced_both = True
-            send_telegram(
+        if triggered == WATCH_TICKERS and not announced_done:
+            announced_done = True
+            broadcast(
                 f"✅ <b>Resultados de {', '.join(sorted(WATCH_TICKERS))} capturados.</b>\n"
                 f"Sigo vigiando até a meia-noite caso saiam versões/complementos."
             )
-            log("Ambos capturados — seguindo até meia-noite (sem early-stop).")
+            log("Tudo capturado — seguindo até meia-noite (sem early-stop).")
 
         time.sleep(POLL_SECONDS)
 
 
 def main() -> int:
     if "--test" in sys.argv:
-        ok = send_telegram(f"✅ Teste do watcher <b>{html.escape(WATCH_LABEL)}</b> — chegou? (só você recebe isto)")
-        print("Telegram de teste:", "OK" if ok else "FALHOU")
-        return 0 if ok else 1
+        if not DESTINATIONS:
+            print("Nenhum destino em email_config.json (telegram.destinations).")
+            return 1
+        broadcast(f"✅ Teste do watcher <b>{html.escape(WATCH_LABEL)}</b> — chegou?")
+        print(f"Telegram de teste enviado para {len(DESTINATIONS)} destino(s): "
+              + ", ".join(str(d['chat_id']) for d in DESTINATIONS))
+        return 0
 
     if "--once" in sys.argv:
         fs = fetch_watch_filings(cvm.make_session())
         print(f"{len(fs)} doc(s) '{WATCH_CATEGORY}' agora para {sorted(WATCH_TICKERS)}:")
         for f in fs:
             print(f"  {f.ticker} | {(f.subject or f.doc_type)} | protocolo {f.protocol} | {f.filing_time}")
+        print(f"Destinos configurados: {[str(d['chat_id']) for d in DESTINATIONS]}")
         return 0
 
     return run_watch()
