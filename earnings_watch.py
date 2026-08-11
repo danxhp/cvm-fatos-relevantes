@@ -8,7 +8,7 @@ Roda de minuto a minuto e avisa APENAS no Telegram (não envia email). Os destin
 lidos de email_config.json (bloco telegram.destinations) — os mesmos do monitor principal,
 ou seja, TODOS os configurados recebem (hoje: Danilo + Enzo). Dedup é por (protocolo, chat),
 então cada pessoa recebe cada doc uma vez e uma falha de envio é retentada só para quem faltou.
-Para sozinho à meia-noite (horário local).
+Avisa (pop-up + som + Telegram) no PRIMEIRO documento de hoje e encerra; se nada sair, para à meia-noite.
 
 Uso:
     py earnings_watch.py            # inicia o watcher (roda até meia-noite)
@@ -186,62 +186,41 @@ def run_watch() -> int:
     log(f"Destinos ({len(DESTINATIONS)}): {chats}. Encerra à meia-noite: {midnight:%Y-%m-%d %H:%M}.")
 
     seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
-    triggered: set = set()      # tickers com pelo menos um doc entregue a TODOS os destinos
-    announced_done = False
-    popped: set = set()         # protocolos que já geraram pop-up na tela (evita repetir)
-    spoke = False               # já falou "saiu ..." em voz alta (só uma vez por run)
-
-    # Reconciliação de restart: ticker cujos docs de hoje já foram entregues a todos (sem reenviar)
-    try:
-        for f in fetch_watch_filings(cvm.make_session()):
-            if _is_today(f, today_str) and all(k in seen for k in _keys_for(f)):
-                triggered.add(f.ticker)
-    except Exception as e:
-        log(f"WARNING: reconciliação inicial falhou: {e}")
-    if triggered:
-        log(f"Reconciliação: já entregues hoje (não reenvio): {sorted(triggered)}")
-    if triggered == WATCH_TICKERS:
-        announced_done = True
+    alerted = False             # já disparou pop-up + som uma vez (na detecção do 1º doc)
 
     broadcast(
         f"🟢 <b>Watcher {html.escape(WATCH_LABEL)} iniciado</b>\n"
         f"Vigiando <b>{', '.join(sorted(WATCH_TICKERS))}</b> (categoria {html.escape(WATCH_CATEGORY)}) "
-        f"de minuto a minuto. Envio os docs de hoje e sigo até a meia-noite ({midnight:%H:%M})."
+        f"de minuto a minuto. Aviso no primeiro documento e encerro (ou à meia-noite {midnight:%H:%M})."
     )
     popup(f"Watcher {WATCH_LABEL} iniciado",
           f"Vigiando {', '.join(sorted(WATCH_TICKERS))} de minuto a minuto.\n"
-          f"Vou abrir um pop-up na tela assim que o resultado sair. Encerro à meia-noite.")
+          f"Pop-up + som + Telegram assim que o primeiro documento sair.")
 
     while True:
         now = datetime.now()
         if now >= midnight:
-            faltou = sorted(WATCH_TICKERS - triggered)
-            broadcast(
-                "🌙 <b>Watcher encerrado (meia-noite).</b>\n"
-                + (f"Capturados hoje: {', '.join(sorted(triggered))}.\n" if triggered else "Nada capturado hoje.\n")
-                + (f"Não saiu: {', '.join(faltou)}." if faltou else "Tudo capturado. ✅")
-            )
-            log(f"Encerrado à meia-noite. Triggered={sorted(triggered)} Faltou={faltou}")
+            broadcast("🌙 <b>Watcher encerrado (meia-noite)</b> — nada divulgado hoje.")
+            log("Encerrado à meia-noite sem documento.")
             return 0
 
+        delivered = False
         try:
-            # Entrega docs da categoria alvo COM DATA DE HOJE, dedup por (protocolo, chat).
-            # Só marca a chave como entregue se o envio deu certo — falha de um destino é
-            # RETENTADA no próximo minuto só para ele (os que já receberam não recebem de novo).
+            # Assim que sair o PRIMEIRO documento de hoje (release/ITR/etc), avisa e encerra.
+            # Pop-up + som disparam UMA vez, na detecção. Só marca 'entregue' se o envio deu
+            # certo — falha transitória é retentada no próximo minuto (não perde nem para cedo).
             for f in fetch_watch_filings(cvm.make_session()):
                 if not _is_today(f, today_str):
                     continue
                 keys = _keys_for(f)
                 if all(k in seen for k in keys):
-                    continue  # já entregue a todos
-                if f.protocol not in popped:
-                    popped.add(f.protocol)
+                    continue
+                if not alerted:
+                    alerted = True
                     popup(f"🔔 {WATCH_LABEL} — {f.ticker}",
                           f"{f.company_name}\n{f.category}\n{f.subject or f.doc_type or ''}\n\n"
                           f"Protocolo {f.protocol} · {f.filing_time}")
-                    if not spoke:
-                        spoke = True
-                        announce(f"Saiu {SPEAK_NAME}, saiu {SPEAK_NAME}")
+                    announce(("Saiu " + SPEAK_NAME + "! ") * 3)
                 text = render(f)
                 for d in DESTINATIONS:
                     key = f"{f.protocol}|{d['chat_id']}"
@@ -250,23 +229,17 @@ def run_watch() -> int:
                     if _post(d["bot_token"], d["chat_id"], text):
                         seen.add(key)
                         save_seen(seen)
+                        delivered = True
                         log(f"ENTREGUE {f.ticker} | {(f.subject or f.doc_type)} | proto {f.protocol} | {f.filing_time} -> chat {d['chat_id']}")
                     else:
                         log(f"FALHA {f.ticker} | proto {f.protocol} -> chat {d['chat_id']} (retento no próximo minuto)")
-                if all(k in seen for k in keys):
-                    triggered.add(f.ticker)
         except Exception as e:
             log(f"WARNING: erro no poll (segue no próximo minuto): {e}")
 
-        # Aviso ÚNICO quando tudo saiu — mas NÃO paramos: seguimos até a meia-noite
-        # para não perder complementos do lote (DF/ITR que saem minutos depois).
-        if triggered == WATCH_TICKERS and not announced_done:
-            announced_done = True
-            broadcast(
-                f"✅ <b>Resultados de {', '.join(sorted(WATCH_TICKERS))} capturados.</b>\n"
-                f"Sigo vigiando até a meia-noite caso saiam versões/complementos."
-            )
-            log("Tudo capturado — seguindo até meia-noite (sem early-stop).")
+        if delivered:
+            broadcast(f"✅ <b>Primeiro documento da {html.escape(SPEAK_NAME)} capturado.</b> Encerrando o watcher.")
+            log("Primeiro documento entregue — encerrando (job done).")
+            return 0
 
         time.sleep(POLL_SECONDS)
 

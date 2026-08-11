@@ -348,8 +348,9 @@ Já foi usado para o **2T26** de FLRY3/HYPE3 e está configurado para o **2T26 d
   **não reenvia** o que já foi mandado (sobrevive a crash/restart).
 - **Só marca como entregue após o envio dar certo** — uma falha transitória do Telegram é
   **retentada** no minuto seguinte (não perde o alerta).
-- **Para sozinho à meia-noite** (horário local). Quando todos os tickers já saíram, avisa uma vez e
-  **segue vigiando até a meia-noite** (para não perder complementos do lote); não para cedo.
+- **Avisa no primeiro documento e encerra:** assim que sai o **primeiro** doc de hoje
+  (release/ITR/etc), dispara pop-up + som + Telegram e **encerra** (job done — não segue caçando
+  complementos). Se nada sair, **para à meia-noite** (horário local).
 - **Destinos = `email_config.json`:** envia para **todos** os `telegram.destinations` (hoje: Danilo
   + Enzo), cada um pelo seu próprio bot — os mesmos destinos do monitor principal. Dedup é **por
   (protocolo, chat)**: cada pessoa recebe cada doc uma vez, e uma falha de envio é retentada só para
