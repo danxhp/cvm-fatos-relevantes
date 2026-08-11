@@ -357,6 +357,8 @@ Já foi usado para o **2T26** de FLRY3/HYPE3 e está configurado para o **2T26 d
 - **Pop-up na tela (Windows):** além do Telegram, abre um `MessageBox` centralizado quando um doc
   sai (e um na inicialização, como confirmação). Roda numa thread — não trava o loop de polling.
   Aparece na sessão interativa (por isso o agendamento usa `LogonType Interactive`).
+- **Alerta de voz (Windows):** junto do pop-up, toca bips e **fala "saiu &lt;nome&gt;"** (TTS via
+  SAPI, sem dependência extra; nome em `SPEAK_NAME`). Uma vez por resultado, em thread.
 
 ### Uso
 

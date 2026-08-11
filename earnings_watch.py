@@ -22,9 +22,11 @@ from __future__ import annotations
 
 import ctypes
 import html
+import subprocess
 import sys
 import threading
 import time
+import winsound
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -38,6 +40,7 @@ import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/pars
 WATCH_TICKERS  = {"BLAU3"}                          # empresas a vigiar
 WATCH_CATEGORY = "Dados Econômico-Financeiros"      # categoria do release de resultados
 WATCH_LABEL    = "Resultados 2T26"                  # texto no cabeçalho da mensagem
+SPEAK_NAME     = "Blau"                             # nome falado no alerta de voz ("saiu <nome>")
 POLL_SECONDS   = 60                                 # de minuto a minuto
 # Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
@@ -71,6 +74,30 @@ def popup(title: str, text: str) -> None:
         threading.Thread(target=_show, daemon=True).start()
     except Exception as e:
         log(f"WARNING: pop-up thread falhou: {e}")
+
+
+def announce(phrase: str) -> None:
+    """Bip + fala em voz alta (TTS via SAPI do Windows) — não bloqueia o loop."""
+    safe = str(phrase).replace("'", "''")
+    def _run():
+        try:
+            for _ in range(2):
+                winsound.Beep(880, 180)
+                winsound.Beep(1245, 180)
+        except Exception:
+            pass
+        try:
+            subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"(New-Object -ComObject SAPI.SpVoice).Speak('{safe}') | Out-Null"],
+                creationflags=0x08000000, timeout=30,   # CREATE_NO_WINDOW
+            )
+        except Exception as e:
+            log(f"WARNING: TTS falhou: {e}")
+    try:
+        threading.Thread(target=_run, daemon=True).start()
+    except Exception:
+        pass
 
 
 def load_destinations() -> list:
@@ -162,6 +189,7 @@ def run_watch() -> int:
     triggered: set = set()      # tickers com pelo menos um doc entregue a TODOS os destinos
     announced_done = False
     popped: set = set()         # protocolos que já geraram pop-up na tela (evita repetir)
+    spoke = False               # já falou "saiu ..." em voz alta (só uma vez por run)
 
     # Reconciliação de restart: ticker cujos docs de hoje já foram entregues a todos (sem reenviar)
     try:
@@ -211,6 +239,9 @@ def run_watch() -> int:
                     popup(f"🔔 {WATCH_LABEL} — {f.ticker}",
                           f"{f.company_name}\n{f.category}\n{f.subject or f.doc_type or ''}\n\n"
                           f"Protocolo {f.protocol} · {f.filing_time}")
+                    if not spoke:
+                        spoke = True
+                        announce(f"Saiu {SPEAK_NAME}, saiu {SPEAK_NAME}")
                 text = render(f)
                 for d in DESTINATIONS:
                     key = f"{f.protocol}|{d['chat_id']}"
