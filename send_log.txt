@@ -43,3 +43,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-10 22:50:35 | email | OK | FLRY3 | 1555429 | Dados Econômico-Financeiros | 11ª Emissão de Debêntures | 
 2026-08-10 22:50:36 | telegram | OK | FLRY3 | 1555429 | Dados Econômico-Financeiros | 11ª Emissão de Debêntures | chat 1496332324
 2026-08-10 22:50:36 | telegram | OK | FLRY3 | 1555429 | Dados Econômico-Financeiros | 11ª Emissão de Debêntures | chat 8369248929
+2026-08-11 22:45:32 | email | OK | BLAU3 | 1556040 | Dados Econômico-Financeiros | Release 2T26 | 
+2026-08-11 22:45:32 | telegram | OK | BLAU3 | 1556040 | Dados Econômico-Financeiros | Release 2T26 | chat 1496332324
