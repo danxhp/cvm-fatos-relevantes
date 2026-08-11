@@ -20,8 +20,10 @@ Quem recebe é controlado por email_config.json (telegram.destinations).
 """
 from __future__ import annotations
 
+import ctypes
 import html
 import sys
+import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -54,6 +56,21 @@ def log(msg: str) -> None:
             f.write(line + "\n")
     except Exception:
         pass
+
+
+def popup(title: str, text: str) -> None:
+    """Mostra um pop-up centralizado na tela (MessageBox do Windows), sem bloquear o loop.
+    Roda numa thread — se ninguém fechar, o watcher continua vigiando normalmente."""
+    def _show():
+        try:
+            # MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_SETFOREGROUND -> centralizado, no topo
+            ctypes.windll.user32.MessageBoxW(0, str(text), str(title), 0x40 | 0x1000 | 0x10000)
+        except Exception as e:
+            log(f"WARNING: pop-up falhou: {e}")
+    try:
+        threading.Thread(target=_show, daemon=True).start()
+    except Exception as e:
+        log(f"WARNING: pop-up thread falhou: {e}")
 
 
 def load_destinations() -> list:
@@ -144,6 +161,7 @@ def run_watch() -> int:
     seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
     triggered: set = set()      # tickers com pelo menos um doc entregue a TODOS os destinos
     announced_done = False
+    popped: set = set()         # protocolos que já geraram pop-up na tela (evita repetir)
 
     # Reconciliação de restart: ticker cujos docs de hoje já foram entregues a todos (sem reenviar)
     try:
@@ -162,6 +180,9 @@ def run_watch() -> int:
         f"Vigiando <b>{', '.join(sorted(WATCH_TICKERS))}</b> (categoria {html.escape(WATCH_CATEGORY)}) "
         f"de minuto a minuto. Envio os docs de hoje e sigo até a meia-noite ({midnight:%H:%M})."
     )
+    popup(f"Watcher {WATCH_LABEL} iniciado",
+          f"Vigiando {', '.join(sorted(WATCH_TICKERS))} de minuto a minuto.\n"
+          f"Vou abrir um pop-up na tela assim que o resultado sair. Encerro à meia-noite.")
 
     while True:
         now = datetime.now()
@@ -185,6 +206,11 @@ def run_watch() -> int:
                 keys = _keys_for(f)
                 if all(k in seen for k in keys):
                     continue  # já entregue a todos
+                if f.protocol not in popped:
+                    popped.add(f.protocol)
+                    popup(f"🔔 {WATCH_LABEL} — {f.ticker}",
+                          f"{f.company_name}\n{f.category}\n{f.subject or f.doc_type or ''}\n\n"
+                          f"Protocolo {f.protocol} · {f.filing_time}")
                 text = render(f)
                 for d in DESTINATIONS:
                     key = f"{f.protocol}|{d['chat_id']}"

@@ -354,6 +354,9 @@ Já foi usado para o **2T26** de FLRY3/HYPE3 e está configurado para o **2T26 d
   + Enzo), cada um pelo seu próprio bot — os mesmos destinos do monitor principal. Dedup é **por
   (protocolo, chat)**: cada pessoa recebe cada doc uma vez, e uma falha de envio é retentada só para
   quem faltou. Nunca envia email.
+- **Pop-up na tela (Windows):** além do Telegram, abre um `MessageBox` centralizado quando um doc
+  sai (e um na inicialização, como confirmação). Roda numa thread — não trava o loop de polling.
+  Aparece na sessão interativa (por isso o agendamento usa `LogonType Interactive`).
 
 ### Uso
 
