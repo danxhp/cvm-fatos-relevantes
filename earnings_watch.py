@@ -37,10 +37,11 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"BLAU3"}                          # empresas a vigiar
+WATCH_TICKERS  = {"ONCO3", "COGN3", "MATD3", "QUAL3", "RDOR3", "HAPV3"}   # empresas a vigiar
 WATCH_CATEGORY = "Dados Econômico-Financeiros"      # categoria do release de resultados
 WATCH_LABEL    = "Resultados 2T26"                  # texto no cabeçalho da mensagem
-SPEAK_NAME     = "Blau"                             # nome falado no alerta de voz ("saiu <nome>")
+SPEAK_NAMES    = {"ONCO3": "Oncoclínicas", "COGN3": "Cogna", "MATD3": "Mater Dei",
+                  "QUAL3": "Qualicorp", "RDOR3": "Rede Dor", "HAPV3": "Hapvida"}  # falado: "saiu <nome>"
 POLL_SECONDS   = 60                                 # de minuto a minuto
 # Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
@@ -186,41 +187,49 @@ def run_watch() -> int:
     log(f"Destinos ({len(DESTINATIONS)}): {chats}. Encerra à meia-noite: {midnight:%Y-%m-%d %H:%M}.")
 
     seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
-    alerted = False             # já disparou pop-up + som uma vez (na detecção do 1º doc)
+    done: set = set()           # tickers cujo 1º doc já foi ENTREGUE a todos os destinos
+    alerted: set = set()        # tickers que já dispararam pop-up + som (uma vez cada)
 
     broadcast(
         f"🟢 <b>Watcher {html.escape(WATCH_LABEL)} iniciado</b>\n"
         f"Vigiando <b>{', '.join(sorted(WATCH_TICKERS))}</b> (categoria {html.escape(WATCH_CATEGORY)}) "
-        f"de minuto a minuto. Aviso no primeiro documento e encerro (ou à meia-noite {midnight:%H:%M})."
+        f"de minuto a minuto. Aviso no 1º documento de CADA empresa; encerro quando todas saírem "
+        f"(ou à meia-noite {midnight:%H:%M})."
     )
     popup(f"Watcher {WATCH_LABEL} iniciado",
           f"Vigiando {', '.join(sorted(WATCH_TICKERS))} de minuto a minuto.\n"
-          f"Pop-up + som + Telegram assim que o primeiro documento sair.")
+          f"Pop-up + som + Telegram no primeiro documento de cada empresa.")
 
     while True:
         now = datetime.now()
         if now >= midnight:
-            broadcast("🌙 <b>Watcher encerrado (meia-noite)</b> — nada divulgado hoje.")
-            log("Encerrado à meia-noite sem documento.")
+            faltou = sorted(WATCH_TICKERS - done)
+            broadcast(
+                "🌙 <b>Watcher encerrado (meia-noite).</b>\n"
+                + (f"Saíram: {', '.join(sorted(done))}.\n" if done else "Nada saiu hoje.\n")
+                + (f"Não saíram: {', '.join(faltou)}." if faltou else "Todas saíram. ✅")
+            )
+            log(f"Encerrado à meia-noite. Saíram={sorted(done)} Faltou={faltou}")
             return 0
 
-        delivered = False
         try:
-            # Assim que sair o PRIMEIRO documento de hoje (release/ITR/etc), avisa e encerra.
-            # Pop-up + som disparam UMA vez, na detecção. Só marca 'entregue' se o envio deu
-            # certo — falha transitória é retentada no próximo minuto (não perde nem para cedo).
+            # Para CADA empresa: avisa (pop-up + som + Telegram) no seu PRIMEIRO documento de hoje
+            # e a marca como 'done' (não repete depois). Encerra quando todas saírem. Só marca
+            # entregue se o envio deu certo — falha transitória é retentada no próximo minuto.
             for f in fetch_watch_filings(cvm.make_session()):
-                if not _is_today(f, today_str):
+                if not _is_today(f, today_str) or f.ticker in done:
                     continue
                 keys = _keys_for(f)
                 if all(k in seen for k in keys):
+                    done.add(f.ticker)      # já entregue (ex.: restart) — marca sem reenviar
                     continue
-                if not alerted:
-                    alerted = True
+                if f.ticker not in alerted:  # pop-up + som UMA vez por empresa, na detecção
+                    alerted.add(f.ticker)
+                    name = SPEAK_NAMES.get(f.ticker, f.ticker)
                     popup(f"🔔 {WATCH_LABEL} — {f.ticker}",
                           f"{f.company_name}\n{f.category}\n{f.subject or f.doc_type or ''}\n\n"
                           f"Protocolo {f.protocol} · {f.filing_time}")
-                    announce(("Saiu " + SPEAK_NAME + "! ") * 3)
+                    announce(("Saiu " + name + "! ") * 3)
                 text = render(f)
                 for d in DESTINATIONS:
                     key = f"{f.protocol}|{d['chat_id']}"
@@ -229,16 +238,18 @@ def run_watch() -> int:
                     if _post(d["bot_token"], d["chat_id"], text):
                         seen.add(key)
                         save_seen(seen)
-                        delivered = True
                         log(f"ENTREGUE {f.ticker} | {(f.subject or f.doc_type)} | proto {f.protocol} | {f.filing_time} -> chat {d['chat_id']}")
                     else:
                         log(f"FALHA {f.ticker} | proto {f.protocol} -> chat {d['chat_id']} (retento no próximo minuto)")
+                if all(k in seen for k in keys):
+                    done.add(f.ticker)
+                    log(f"{f.ticker} capturada ({len(done)}/{len(WATCH_TICKERS)}).")
         except Exception as e:
             log(f"WARNING: erro no poll (segue no próximo minuto): {e}")
 
-        if delivered:
-            broadcast(f"✅ <b>Primeiro documento da {html.escape(SPEAK_NAME)} capturado.</b> Encerrando o watcher.")
-            log("Primeiro documento entregue — encerrando (job done).")
+        if done == WATCH_TICKERS:
+            broadcast(f"✅ <b>Todos os resultados saíram</b> ({', '.join(sorted(WATCH_TICKERS))}). Encerrando o watcher.")
+            log("Todas as empresas capturadas — encerrando (job done).")
             return 0
 
         time.sleep(POLL_SECONDS)
