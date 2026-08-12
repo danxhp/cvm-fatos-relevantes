@@ -65,3 +65,6 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-12 23:00:43 | email | OK | HAPV3 | 1556686 | Dados Econômico-Financeiros | ITR 1T26 - IFRS 17 | 
 2026-08-12 23:00:43 | telegram | OK | HAPV3 | 1556686 | Dados Econômico-Financeiros | ITR 1T26 - IFRS 17 | chat 1496332324
 2026-08-12 23:00:44 | telegram | OK | HAPV3 | 1556686 | Dados Econômico-Financeiros | ITR 1T26 - IFRS 17 | chat 8369248929
+2026-08-12 23:05:57 | email | OK | HAPV3 | 1556691 | Dados Econômico-Financeiros | Release 2T26 | 
+2026-08-12 23:05:58 | telegram | OK | HAPV3 | 1556691 | Dados Econômico-Financeiros | Release 2T26 | chat 1496332324
+2026-08-12 23:05:58 | telegram | OK | HAPV3 | 1556691 | Dados Econômico-Financeiros | Release 2T26 | chat 8369248929
