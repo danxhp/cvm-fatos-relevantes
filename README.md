@@ -352,6 +352,8 @@ Já foi usado para o **2T26** de FLRY3/HYPE3 e está configurado para o **2T26 d
   no **primeiro documento** de resultados de cada empresa — de qualquer categoria em
   `WATCH_CATEGORIES` (hoje *Dados Econômico-Financeiros* + *ITR*), o que sair primeiro (DF, ITR ou
   release) — e a marca como pronta; **encerra quando todas** saírem (ou à meia-noite, com resumo).
+- **SEC/EDGAR também:** tickers vigiados que têm `sec_cik` (ex.: **AFYA**, na NASDAQ) são pegos via
+  **6-K/20-F na SEC** — não pela CVM. Datas ISO (SEC) e `dd/mm/aaaa` (CVM) são ambas reconhecidas.
 - **Destinos = `email_config.json`:** envia para **todos** os `telegram.destinations` (hoje: Danilo
   + Enzo), cada um pelo seu próprio bot — os mesmos destinos do monitor principal. Dedup é **por
   (protocolo, chat)**: cada pessoa recebe cada doc uma vez, e uma falha de envio é retentada só para

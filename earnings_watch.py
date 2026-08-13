@@ -37,11 +37,11 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"YDUQ3", "DASA3"}                 # empresas a vigiar (CVM)
+WATCH_TICKERS  = {"YDUQ3", "DASA3", "AFYA"}         # YDUQ3/DASA3 na CVM; AFYA na SEC/EDGAR
 # Avisa no PRIMEIRO documento de resultados de cada empresa, de qualquer um destes tipos:
 WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}
 WATCH_LABEL    = "Resultados 2T26"                  # texto no cabeçalho da mensagem
-SPEAK_NAMES    = {"YDUQ3": "Yduqs", "DASA3": "Dasa"}                  # falado: "saiu <nome>"
+SPEAK_NAMES    = {"YDUQ3": "Yduqs", "DASA3": "Dasa", "AFYA": "Afya"}  # falado: "saiu <nome>"
 POLL_SECONDS   = 60                                 # de minuto a minuto
 # Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
@@ -133,10 +133,14 @@ def broadcast(text: str) -> None:
 
 
 def fetch_watch_filings(session) -> list:
-    """Documentos das categorias alvo (DF / ITR / release) das empresas vigiadas."""
-    raw = cvm.fetch_raw_documents(session, cvm.CVM_ALL_CATEGORIES)
-    return [f for f in cvm.parse_rows(raw)
-            if f.ticker in WATCH_TICKERS and f.category in WATCH_CATEGORIES]
+    """Documentos de resultados das empresas vigiadas: categorias alvo na CVM (DF/ITR/release)
+    + qualquer 6-K/20-F na SEC/EDGAR (ex.: AFYA, que não está na CVM)."""
+    out = [f for f in cvm.parse_rows(cvm.fetch_raw_documents(session, cvm.CVM_ALL_CATEGORIES))
+           if f.ticker in WATCH_TICKERS and f.category in WATCH_CATEGORIES]
+    for c in cvm.COMPANIES:  # SEC/EDGAR para tickers vigiados que têm sec_cik (ex.: AFYA)
+        if c.get("ticker") in WATCH_TICKERS and c.get("sec_cik"):
+            out += cvm.fetch_sec_filings(session, c)
+    return out
 
 
 def render(f) -> str:
@@ -150,8 +154,10 @@ def render(f) -> str:
     )
 
 
-def _is_today(f, today_str: str) -> bool:
-    return (f.filing_time or "").strip().startswith(today_str)
+def _is_today(f, today_str: str, today_iso: str) -> bool:
+    # CVM usa dd/mm/aaaa; SEC/EDGAR usa ISO (aaaa-mm-ddT...). Aceita os dois.
+    ft = (f.filing_time or "").strip()
+    return ft.startswith(today_str) or ft.startswith(today_iso)
 
 
 def _keys_for(f) -> list:
@@ -181,6 +187,7 @@ def run_watch() -> int:
 
     start = datetime.now()
     today_str = start.strftime("%d/%m/%Y")
+    today_iso = start.strftime("%Y-%m-%d")   # para docs da SEC/EDGAR (data em ISO)
     midnight = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
     chats = ", ".join(str(d["chat_id"]) for d in DESTINATIONS)
     log(f"Watcher iniciado. Vigiando {sorted(WATCH_TICKERS)} | {sorted(WATCH_CATEGORIES)} | hoje={today_str}.")
@@ -216,7 +223,7 @@ def run_watch() -> int:
             # Avisa no 1º documento (DF/ITR/release) de CADA empresa e a marca 'done' (não repete).
             # Só marca entregue se o envio deu certo — retenta em falha.
             for f in fetch_watch_filings(cvm.make_session()):
-                if not _is_today(f, today_str) or f.ticker in done:
+                if not _is_today(f, today_str, today_iso) or f.ticker in done:
                     continue
                 keys = _keys_for(f)
                 if all(k in seen for k in keys):
