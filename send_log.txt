@@ -74,3 +74,6 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-12 23:20:54 | email | OK | MATD3 | 1556701 | Dados Econômico-Financeiros | Release 2T26 | 
 2026-08-12 23:20:54 | telegram | OK | MATD3 | 1556701 | Dados Econômico-Financeiros | Release 2T26 | chat 1496332324
 2026-08-12 23:20:55 | telegram | OK | MATD3 | 1556701 | Dados Econômico-Financeiros | Release 2T26 | chat 8369248929
+2026-08-13 11:55:35 | email | OK | RDOR3 | 1556818 | Comunicado ao Mercado | Apresentação da Teleconferência de Resultados 2T26 | 
+2026-08-13 11:55:36 | telegram | OK | RDOR3 | 1556818 | Comunicado ao Mercado | Apresentação da Teleconferência de Resultados 2T26 | chat 1496332324
+2026-08-13 11:55:36 | telegram | OK | RDOR3 | 1556818 | Comunicado ao Mercado | Apresentação da Teleconferência de Resultados 2T26 | chat 8369248929
