@@ -348,11 +348,10 @@ Já foi usado para o **2T26** de FLRY3/HYPE3 e está configurado para o **2T26 d
   **não reenvia** o que já foi mandado (sobrevive a crash/restart).
 - **Só marca como entregue após o envio dar certo** — uma falha transitória do Telegram é
   **retentada** no minuto seguinte (não perde o alerta).
-- **Avisa no release de cada empresa (um por empresa):** dispara pop-up + som + Telegram no
-  **release de resultados** de cada empresa e a marca como pronta; **encerra quando todas** saírem
-  (ou à meia-noite, com resumo). O "release" é filtrado por `RELEASE_KEYWORDS` (release/divulga/
-  press/resultado) **ignorando Demonstrações Financeiras e ITR** — que às vezes saem *antes* do
-  release e não devem disparar o aviso no lugar dele.
+- **Avisa no primeiro documento de cada empresa (um por empresa):** dispara pop-up + som + Telegram
+  no **primeiro documento** de resultados de cada empresa — de qualquer categoria em
+  `WATCH_CATEGORIES` (hoje *Dados Econômico-Financeiros* + *ITR*), o que sair primeiro (DF, ITR ou
+  release) — e a marca como pronta; **encerra quando todas** saírem (ou à meia-noite, com resumo).
 - **Destinos = `email_config.json`:** envia para **todos** os `telegram.destinations` (hoje: Danilo
   + Enzo), cada um pelo seu próprio bot — os mesmos destinos do monitor principal. Dedup é **por
   (protocolo, chat)**: cada pessoa recebe cada doc uma vez, e uma falha de envio é retentada só para

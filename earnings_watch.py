@@ -8,7 +8,7 @@ Roda de minuto a minuto e avisa APENAS no Telegram (não envia email). Os destin
 lidos de email_config.json (bloco telegram.destinations) — os mesmos do monitor principal,
 ou seja, TODOS os configurados recebem (hoje: Danilo + Enzo). Dedup é por (protocolo, chat),
 então cada pessoa recebe cada doc uma vez e uma falha de envio é retentada só para quem faltou.
-Avisa no RELEASE de resultados de cada empresa (um por empresa; ignora Demonstrações/ITR), com pop-up + som + Telegram; encerra quando todas saírem (ou à meia-noite).
+Avisa no PRIMEIRO documento de resultados de cada empresa (DF, ITR ou release), com pop-up + som + Telegram; encerra quando todas saírem (ou à meia-noite).
 
 Uso:
     py earnings_watch.py            # inicia o watcher (roda até meia-noite)
@@ -37,15 +37,12 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"ONCO3", "COGN3", "MATD3", "QUAL3", "RDOR3", "HAPV3"}   # empresas a vigiar
-WATCH_CATEGORY = "Dados Econômico-Financeiros"      # categoria do release de resultados
+WATCH_TICKERS  = {"YDUQ3", "DASA3"}                 # empresas a vigiar (CVM)
+# Avisa no PRIMEIRO documento de resultados de cada empresa, de qualquer um destes tipos:
+WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}
 WATCH_LABEL    = "Resultados 2T26"                  # texto no cabeçalho da mensagem
-SPEAK_NAMES    = {"ONCO3": "Oncoclínicas", "COGN3": "Cogna", "MATD3": "Mater Dei",
-                  "QUAL3": "Qualicorp", "RDOR3": "Rede Dor", "HAPV3": "Hapvida"}  # falado: "saiu <nome>"
+SPEAK_NAMES    = {"YDUQ3": "Yduqs", "DASA3": "Dasa"}                  # falado: "saiu <nome>"
 POLL_SECONDS   = 60                                 # de minuto a minuto
-# Avisa SÓ no release de resultados (ignora Demonstrações Financeiras / ITR). Um doc da categoria
-# alvo cujo assunto contém um destes termos é tratado como o release:
-RELEASE_KEYWORDS = ("release", "divulga", "press", "resultado")
 # Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
 
@@ -135,17 +132,11 @@ def broadcast(text: str) -> None:
         _post(d["bot_token"], d["chat_id"], text)
 
 
-def _is_release(f) -> bool:
-    """True se o doc parece o RELEASE de resultados (e não Demonstrações Financeiras / ITR)."""
-    subj = (f.subject or f.doc_type or "").lower()
-    return any(k in subj for k in RELEASE_KEYWORDS)
-
-
 def fetch_watch_filings(session) -> list:
-    """RELEASES de resultados (categoria alvo + assunto de release) das empresas vigiadas."""
+    """Documentos das categorias alvo (DF / ITR / release) das empresas vigiadas."""
     raw = cvm.fetch_raw_documents(session, cvm.CVM_ALL_CATEGORIES)
     return [f for f in cvm.parse_rows(raw)
-            if f.ticker in WATCH_TICKERS and f.category == WATCH_CATEGORY and _is_release(f)]
+            if f.ticker in WATCH_TICKERS and f.category in WATCH_CATEGORIES]
 
 
 def render(f) -> str:
@@ -192,22 +183,22 @@ def run_watch() -> int:
     today_str = start.strftime("%d/%m/%Y")
     midnight = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
     chats = ", ".join(str(d["chat_id"]) for d in DESTINATIONS)
-    log(f"Watcher iniciado. Vigiando {sorted(WATCH_TICKERS)} | '{WATCH_CATEGORY}' | hoje={today_str}.")
+    log(f"Watcher iniciado. Vigiando {sorted(WATCH_TICKERS)} | {sorted(WATCH_CATEGORIES)} | hoje={today_str}.")
     log(f"Destinos ({len(DESTINATIONS)}): {chats}. Encerra à meia-noite: {midnight:%Y-%m-%d %H:%M}.")
 
     seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
-    done: set = set()           # tickers cujo release já foi ENTREGUE a todos os destinos
+    done: set = set()           # tickers cujo 1º doc já foi ENTREGUE a todos os destinos
     alerted: set = set()        # tickers que já dispararam pop-up + som (uma vez cada)
 
     broadcast(
         f"🟢 <b>Watcher {html.escape(WATCH_LABEL)} iniciado</b>\n"
-        f"Vigiando <b>{', '.join(sorted(WATCH_TICKERS))}</b> — aviso no <b>release</b> de resultados "
-        f"de cada empresa (ignora Demonstrações/ITR). Encerro quando todas saírem "
+        f"Vigiando <b>{', '.join(sorted(WATCH_TICKERS))}</b> — aviso no <b>1º documento</b> de resultados "
+        f"de cada empresa (DF, ITR ou release). Encerro quando todas saírem "
         f"(ou à meia-noite {midnight:%H:%M})."
     )
     popup(f"Watcher {WATCH_LABEL} iniciado",
           f"Vigiando {', '.join(sorted(WATCH_TICKERS))} de minuto a minuto.\n"
-          f"Pop-up + som + Telegram no release de cada empresa.")
+          f"Pop-up + som + Telegram no primeiro documento de cada empresa.")
 
     while True:
         now = datetime.now()
@@ -222,8 +213,8 @@ def run_watch() -> int:
             return 0
 
         try:
-            # fetch_watch_filings já retorna SÓ os releases. Avisa no 1º release de CADA empresa e a
-            # marca 'done' (não repete). Só marca entregue se o envio deu certo — retenta em falha.
+            # Avisa no 1º documento (DF/ITR/release) de CADA empresa e a marca 'done' (não repete).
+            # Só marca entregue se o envio deu certo — retenta em falha.
             for f in fetch_watch_filings(cvm.make_session()):
                 if not _is_today(f, today_str) or f.ticker in done:
                     continue
@@ -256,8 +247,8 @@ def run_watch() -> int:
             log(f"WARNING: erro no poll (segue no próximo minuto): {e}")
 
         if done == WATCH_TICKERS:
-            broadcast(f"✅ <b>Todos os releases saíram</b> ({', '.join(sorted(WATCH_TICKERS))}). Encerrando o watcher.")
-            log("Todos os releases capturados — encerrando (job done).")
+            broadcast(f"✅ <b>Todas reportaram</b> ({', '.join(sorted(WATCH_TICKERS))}). Encerrando o watcher.")
+            log("Todas as empresas capturadas — encerrando (job done).")
             return 0
 
         time.sleep(POLL_SECONDS)
@@ -275,7 +266,7 @@ def main() -> int:
 
     if "--once" in sys.argv:
         fs = fetch_watch_filings(cvm.make_session())
-        print(f"{len(fs)} doc(s) '{WATCH_CATEGORY}' agora para {sorted(WATCH_TICKERS)}:")
+        print(f"{len(fs)} doc(s) {sorted(WATCH_CATEGORIES)} agora para {sorted(WATCH_TICKERS)}:")
         for f in fs:
             print(f"  {f.ticker} | {(f.subject or f.doc_type)} | protocolo {f.protocol} | {f.filing_time}")
         print(f"Destinos configurados: {[str(d['chat_id']) for d in DESTINATIONS]}")
