@@ -95,3 +95,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-13 20:15:23 | telegram | OK | AFYA | 0001292814-26-004220 | SEC 6-K | 6-K | chat 8369248929
 2026-08-13 21:05:50 | telegram | OK | YDUQ3 | 1557225 | Dados Econômico-Financeiros | Release 2T26 | chat 1496332324
 2026-08-13 21:05:51 | telegram | OK | YDUQ3 | 1557225 | Dados Econômico-Financeiros | Release 2T26 | chat 8369248929
+2026-08-13 21:15:44 | telegram | OK | YDUQ3 | 1557236 | Comunicado ao Mercado | Apresentação 2T26 | chat 1496332324
+2026-08-13 21:15:44 | telegram | OK | YDUQ3 | 1557236 | Comunicado ao Mercado | Apresentação 2T26 | chat 8369248929
