@@ -3,21 +3,22 @@
 
 """
 CVM RAD + SEC EDGAR monitor for listed Brazilian companies.
-- CVM: Fatos Relevantes for B3-listed issuers
-- SEC EDGAR: 6-K / 20-F for foreign-listed issuers (e.g. Afya on NASDAQ)
-- Deduplicates by protocol / accession
-- Silent if nothing new
-- Optional email alerts (configure email_config.json)
+- CVM: several IPE categories (Fato Relevante, Aviso aos Acionistas, Comunicado ao Mercado,
+  ITR - Informações Trimestrais, Dados Econômico-Financeiros) — see CVM_ALLOWED_CATEGORIES.
+- SEC EDGAR: 6-K / 20-F for foreign-listed issuers (e.g. Afya on NASDAQ).
+- Deduplicates by protocol / accession; silent when nothing is new.
+- AI summary (Claude) + alerts via Telegram (one bot per recipient) and email.
+  NOTE: email is currently DISABLED (email_config.json "enabled": false) — Telegram is the
+  active channel; set "enabled": true to re-enable email.
+- Runs 24/7 on GitHub Actions, triggered externally (cron-job.org) with a healthchecks.io
+  dead-man's-switch. See README.md for the full deployment guide.
 
 Recommended use:
-    python cvm_fatos_relevantes_claude.py            # silent run, for cron
-    python cvm_fatos_relevantes_claude.py --once     # manual run with status line
-    python cvm_fatos_relevantes_claude.py --bootstrap  # mark all current as seen
-
-Then schedule it every 15 minutes with:
-- Windows Task Scheduler
-- cron
-- systemd timer
+    python cvm_fatos_relevantes_claude.py             # silent run (cron mode)
+    python cvm_fatos_relevantes_claude.py --once      # manual run with a status line
+    python cvm_fatos_relevantes_claude.py --bootstrap # mark all current docs as seen (no alerts)
+    python cvm_fatos_relevantes_claude.py --test-telegram  # send a Telegram test to all destinations
+    python cvm_fatos_relevantes_claude.py --test-email     # send an email test (needs enabled=true)
 """
 
 from __future__ import annotations

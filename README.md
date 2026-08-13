@@ -4,9 +4,12 @@ Monitora, na CVM, várias categorias de documentos de empresas brasileiras lista
 (setor saúde/educação/telecom) — **Fato Relevante**, **Aviso aos Acionistas**,
 **Comunicado ao Mercado**, **ITR - Informações Trimestrais** e **Dados Econômico-Financeiros** —
 e formulários equivalentes (6-K/20-F/8-K) na SEC para emissoras listadas no exterior (ex.: Afya).
-Gera **resumos automáticos com Claude** e envia **alertas por email e Telegram** assim que um novo
-documento é publicado.
+Gera **resumos automáticos com Claude** e envia **alertas no Telegram** assim que um novo documento
+é publicado. (O envio por **email** existe no código, mas está **desativado** — `enabled: false`
+no `email_config.json`; basta voltar a `true` e re-subir o secret para reativar.)
 
+- Canais de alerta: **Telegram** (ativo, múltiplos destinos) e **email** (desativado). Ambos usam
+  o mesmo `email_config.json`.
 - Categorias monitoradas: definidas em `CVM_ALLOWED_CATEGORIES` no script (buscamos **todas** as
   categorias numa requisição e filtramos por nome — para incluir/remover, edite esse conjunto).
 - Fonte CVM: endpoint interno do RAD/CVM (`frmConsultaExternaCVM.aspx/ListarDocumentos`)
@@ -50,7 +53,7 @@ Deduplica contra seen_protocols.json
       ▼
 Claude (Haiku) resume o documento em bullets
       ▼
-Email (SMTP/Brevo) para os destinatários
+Telegram (um bot por destino)   ·   email (SMTP/Brevo) desativado (enabled=false)
       │
       └── ao final: ping no healthchecks.io ("estou vivo")
 ```
@@ -69,9 +72,9 @@ para sobreviver entre execuções.
 | `seen_protocols.json` | "Memória" do que já foi visto. **Autoritativo no GitHub** (o Actions commita de volta). |
 | `send_log.txt` | Registro **durável** de cada envio (email/telegram), separado por ` \| `. Versionado e commitado de volta pelo Actions. |
 | `fatos_arquivo.csv` | **Base histórica** dos fatos relevantes/avisos detectados (`data, ticker, empresa, categoria, assunto, protocolo, link` — sem resumo). CSV, versionado e commitado de volta. Acumula a partir de 2026-07-26. |
-| `email_config.json` | Credenciais SMTP, chave da Anthropic, destinatários, URL do heartbeat, bloco Telegram. **Não versionado** (`.gitignore`); na nuvem é recriado do secret. |
+| `email_config.json` | Credenciais SMTP, chave da Anthropic, destinatários, URL do heartbeat, bloco Telegram. **Email desativado** (`enabled: false`). **Não versionado** (`.gitignore`); na nuvem é recriado do secret. |
 | `monitor_log.txt` | Log de execução local (texto livre, verboso). **Efêmero na nuvem** — não versionado. |
-| `earnings_watch.py` | **Watcher pontual de resultados** — standalone, roda local, reaproveita o fetch/parse do monitor. Vigia tickers/categoria específicos de minuto a minuto e avisa só no Telegram. Ver [seção dedicada](#watcher-pontual-de-resultados-earnings_watchpy). |
+| `earnings_watch.py` | **Watcher pontual de resultados** — standalone, roda local, reaproveita o fetch/parse do monitor. Vigia tickers (CVM + SEC) de minuto a minuto e avisa no **Telegram + pop-up + voz** na tela. Ver [seção dedicada](#watcher-pontual-de-resultados-earnings_watchpy). |
 | `earnings_watch_seen.json` / `earnings_watch_log.txt` | Estado (protocolos já entregues) e log do watcher. **Não versionados** (`.gitignore`). |
 | `requirements.txt` | Dependências Python. |
 
@@ -84,7 +87,8 @@ pip install -r requirements.txt
 
 python cvm_fatos_relevantes_claude.py            # execução silenciosa (modo cron)
 python cvm_fatos_relevantes_claude.py --once     # execução manual com status na tela
-python cvm_fatos_relevantes_claude.py --test-email   # envia um email de teste aos destinatários
+python cvm_fatos_relevantes_claude.py --test-telegram # Telegram de teste para todos os destinos
+python cvm_fatos_relevantes_claude.py --test-email   # email de teste (só se enabled=true)
 python cvm_fatos_relevantes_claude.py --bootstrap    # marca tudo que existe hoje como "visto" (não alerta)
 ```
 
@@ -97,11 +101,14 @@ de documentos antigos.
 
 ## Configuração (`email_config.json`)
 
-Na primeira execução, um template é criado automaticamente. Preencha:
+Todo o segredo do monitor mora aqui: SMTP (email), chave da Anthropic, `healthcheck_url` e o bloco
+`telegram`. **Neste deploy o email está desativado** (`enabled: false`) — só o Telegram envia; para
+reativar o email, ponha `true` e re-suba o secret. Na primeira execução um template é criado
+automaticamente. Estrutura:
 
 ```json
 {
-  "enabled": true,
+  "enabled": false,
   "smtp_host": "smtp-relay.brevo.com",
   "smtp_port": 587,
   "smtp_username": "SEU_USUARIO_SMTP",
@@ -136,9 +143,9 @@ Na primeira execução, um template é criado automaticamente. Preencha:
 
 ### Alertas no Telegram (opcional)
 
-Além do email, cada fato relevante é enviado para um ou mais destinos no Telegram. Cada destino é
-um par **bot + chat** próprio (`destinations`), então pessoas diferentes podem receber pelo **seu
-próprio bot**. É o mesmo resumo (bullets do Claude), formatado, com link para o documento.
+O Telegram é o **canal ativo** hoje: cada documento novo é enviado para um ou mais destinos, cada um
+um par **bot + chat** próprio (`destinations`) — então pessoas diferentes recebem pelo **seu próprio
+bot**. É o resumo (bullets do Claude), formatado, com link para o documento.
 
 1. Crie um bot com o [@BotFather](https://t.me/BotFather) e copie o **bot token**.
 2. Descubra o **chat_id** de destino: o destinatário manda **qualquer mensagem ao bot primeiro**
@@ -183,7 +190,7 @@ on:
 
 > Deixar o `schedule` ligado como backup não custa nada: se o cron-job.org e o GitHub dispararem
 > juntos, a `concurrency group` enfileira e o `seen_protocols.json` deduplica — ninguém recebe
-> email repetido.
+> alerta repetido.
 
 ### 2. Disparo externo confiável (cron-job.org → workflow_dispatch)
 
@@ -240,7 +247,7 @@ Use o botão **Test run** para validar antes de salvar. Confirme que o job está
 O disparo externo resolve a *cadência*, mas cria pontos cegos: o cron-job.org pode cair, o token
 pode expirar, ou a CVM pode ficar fora do ar — e nesse último caso **o run fica "verde" mesmo sem
 ter checado nada** (o código captura o erro de fetch e segue). Em todos esses casos você
-simplesmente para de receber emails, sem saber se é "não teve fato relevante" ou "está quebrado".
+simplesmente para de receber alertas, sem saber se é "não teve fato relevante" ou "está quebrado".
 
 O heartbeat inverte a lógica: em vez de esperar o sistema quebrado avisar que quebrou, um vigia
 **externo** alerta você quando o monitor **para de dar sinal de vida**.
@@ -331,38 +338,35 @@ levar qualquer repositório com `schedule:` para uma cadência confiável e obse
 
 ## Watcher pontual de resultados (`earnings_watch.py`)
 
-Ferramenta **standalone** para dias de divulgação de resultados: vigia uma categoria e um conjunto
-de tickers específicos, **de minuto a minuto**, e avisa **só no Telegram** (nada de email). Roda
-**local** (não no GitHub Actions) e reaproveita o fetch/parse do monitor principal
-(`import cvm_fatos_relevantes_claude`).
+Ferramenta **standalone** para dias de divulgação de resultados: vigia um conjunto de tickers,
+**de minuto a minuto**, avisa **só no Telegram** (não manda email) e ainda dá **pop-up + voz** na
+tela (Windows). Roda **local** (não no GitHub Actions) e reaproveita o fetch/parse do monitor
+principal (`import cvm_fatos_relevantes_claude`).
 
-Já foi usado para o **2T26** de FLRY3/HYPE3 e está configurado para o **2T26 da BLAU3** (categoria
-*Dados Econômico-Financeiros*).
+Já foi usado nos resultados do **2T26** (FLRY3/HYPE3, BLAU3 e o lote de saúde/educação).
 
 ### Comportamento
 
-- **Entrega os documentos com data de hoje** da categoria/tickers alvo — inclusive os que já tinham
-  saído quando o watcher começou (a divulgação costuma ser um lote de 2–3 docs em poucos minutos:
-  DF PT, DF inglês, press-release).
-- **Dedup por protocolo, com estado persistido** (`earnings_watch_seen.json`): reiniciar o script
-  **não reenvia** o que já foi mandado (sobrevive a crash/restart).
-- **Só marca como entregue após o envio dar certo** — uma falha transitória do Telegram é
-  **retentada** no minuto seguinte (não perde o alerta).
-- **Avisa no primeiro documento de cada empresa (um por empresa):** dispara pop-up + som + Telegram
-  no **primeiro documento** de resultados de cada empresa — de qualquer categoria em
-  `WATCH_CATEGORIES` (hoje *Dados Econômico-Financeiros* + *ITR*), o que sair primeiro (DF, ITR ou
-  release) — e a marca como pronta; **encerra quando todas** saírem (ou à meia-noite, com resumo).
-- **SEC/EDGAR também:** tickers vigiados que têm `sec_cik` (ex.: **AFYA**, na NASDAQ) são pegos via
-  **6-K/20-F na SEC** — não pela CVM. Datas ISO (SEC) e `dd/mm/aaaa` (CVM) são ambas reconhecidas.
-- **Destinos = `email_config.json`:** envia para **todos** os `telegram.destinations` (hoje: Danilo
-  + Enzo), cada um pelo seu próprio bot — os mesmos destinos do monitor principal. Dedup é **por
-  (protocolo, chat)**: cada pessoa recebe cada doc uma vez, e uma falha de envio é retentada só para
-  quem faltou. Nunca envia email.
-- **Pop-up na tela (Windows):** além do Telegram, abre um `MessageBox` centralizado quando um doc
-  sai (e um na inicialização, como confirmação). Roda numa thread — não trava o loop de polling.
-  Aparece na sessão interativa (por isso o agendamento usa `LogonType Interactive`).
-- **Alerta de voz (Windows):** junto do pop-up, toca bips e **fala "saiu &lt;nome&gt;"** (TTS via
-  SAPI, sem dependência extra; nome em `SPEAK_NAME`). Uma vez por resultado, em thread.
+- **Avisa no primeiro documento de CADA empresa (um por empresa):** assim que sai o **primeiro**
+  documento de resultados de uma empresa — de qualquer categoria em `WATCH_CATEGORIES` (ex.: *Dados
+  Econômico-Financeiros* + *ITR*), o que vier primeiro (DF, ITR ou release) — dispara **som + pop-up
+  + Telegram** e marca a empresa como pronta (não repete os docs seguintes dela). **Encerra quando
+  todas** saírem, ou à meia-noite (horário local) com um resumo do que saiu / faltou.
+- **Só documentos de hoje:** considera apenas docs com data de hoje — inclusive os já publicados
+  quando o watcher começou (então um start "atrasado" no mesmo dia ainda entrega o que saiu antes).
+- **CVM + SEC/EDGAR:** tickers na B3 vêm da CVM (filtrados por `WATCH_CATEGORIES`); tickers com
+  `sec_cik` (ex.: **AFYA**, na NASDAQ) vêm via **6-K/20-F na SEC**. Datas `dd/mm/aaaa` (CVM) e ISO
+  (SEC) são ambas reconhecidas.
+- **Dedup por (protocolo, chat), com estado persistido** (`earnings_watch_seen.json`): reiniciar
+  **não reenvia** o já mandado (sobrevive a crash/restart); uma falha de envio a um destino é
+  **retentada** no minuto seguinte só para quem faltou (só marca entregue no sucesso).
+- **Destinos = `email_config.json`:** envia para **todos** os `telegram.destinations` (os mesmos do
+  monitor principal), cada pessoa pelo seu próprio bot. Nunca envia email.
+- **Pop-up na tela (Windows):** `MessageBox` centralizado (1x por empresa + um na inicialização,
+  como confirmação). Roda em thread — não trava o loop. Aparece na sessão interativa (por isso o
+  agendamento usa `LogonType Interactive`).
+- **Alerta de voz (Windows):** bips + **fala "saiu &lt;nome&gt;" 3x** (TTS via SAPI, sem dependência
+  extra; nome por ticker em `SPEAK_NAMES`). Uma vez por empresa, em thread.
 
 ### Uso
 
@@ -378,25 +382,27 @@ Edite o bloco de config no topo do script e rode de novo. Quem recebe é control
 `email_config.json` (`telegram.destinations`), não pelo script.
 
 ```python
-WATCH_TICKERS  = {"BLAU3"}                          # empresas a vigiar
-WATCH_CATEGORY = "Dados Econômico-Financeiros"      # categoria alvo (nome exato da CVM)
-WATCH_LABEL    = "Resultados 2T26"                  # texto do cabeçalho da mensagem
-POLL_SECONDS   = 60                                 # de minuto a minuto
+WATCH_TICKERS    = {"YDUQ3", "DASA3", "AFYA"}       # tickers (CVM e/ou SEC via sec_cik)
+WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}  # 1º doc de qualquer uma
+WATCH_LABEL      = "Resultados 2T26"                # texto do cabeçalho da mensagem
+SPEAK_NAMES      = {"YDUQ3": "Yduqs", "DASA3": "Dasa", "AFYA": "Afya"}  # falado: "saiu <nome>"
+POLL_SECONDS     = 60                               # de minuto a minuto
 ```
 
-> Antes de um novo alvo, zere `earnings_watch_seen.json` (`echo [] > earnings_watch_seen.json`).
+> Antes de um novo alvo, zere o estado: `echo [] > earnings_watch_seen.json`.
 
 ### Agendar para um dia específico (Windows)
 
 O watcher roda até a meia-noite **do dia em que começa**, então para um resultado futuro agende o
-início via Task Scheduler. Exemplo real (BLAU3 2T26, divulga 11/08 after-market → início 17:30):
+início via Task Scheduler (ou só rode o script na hora). Exemplo — início às 17:00 (after-market):
 
 ```powershell
 $action  = New-ScheduledTaskAction -Execute 'C:\Windows\py.exe' -Argument 'C:\dev\GS\CVM_Fatos_relevantes\earnings_watch.py' -WorkingDirectory 'C:\dev\GS\CVM_Fatos_relevantes'
-$trigger = New-ScheduledTaskTrigger -Once -At '2026-08-11T17:30:00'
+$trigger = New-ScheduledTaskTrigger -Once -At '2026-08-13T17:00:00'
 $settings = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 9)
-Register-ScheduledTask -TaskName 'BlauEarningsWatch_2T26' -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force
+Register-ScheduledTask -TaskName 'EarningsWatch_2T26' -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force
 ```
 
-O PC precisa estar ligado ou suspenso (a tarefa o acorda) — não desligado. Consultar/remover:
-`Get-ScheduledTask BlauEarningsWatch_2T26` · `Unregister-ScheduledTask BlauEarningsWatch_2T26 -Confirm:$false`.
+O PC precisa estar ligado ou suspenso (a tarefa o acorda) — não desligado. Consultar / rodar já /
+remover: `Get-ScheduledTask EarningsWatch_2T26` · `Start-ScheduledTask EarningsWatch_2T26` ·
+`Unregister-ScheduledTask EarningsWatch_2T26 -Confirm:$false`.
