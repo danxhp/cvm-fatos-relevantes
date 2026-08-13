@@ -80,3 +80,6 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-13 12:05:32 | email | OK | QUAL3 | 1556825 | Comunicado ao Mercado | Call 2T26 | 
 2026-08-13 12:05:33 | telegram | OK | QUAL3 | 1556825 | Comunicado ao Mercado | Call 2T26 | chat 1496332324
 2026-08-13 12:05:33 | telegram | OK | QUAL3 | 1556825 | Comunicado ao Mercado | Call 2T26 | chat 8369248929
+2026-08-13 12:29:10 | email | OK | MATD3 | 1556833 | Comunicado ao Mercado | Apresentação Webcast 2T26 | 
+2026-08-13 12:29:10 | telegram | OK | MATD3 | 1556833 | Comunicado ao Mercado | Apresentação Webcast 2T26 | chat 1496332324
+2026-08-13 12:29:11 | telegram | OK | MATD3 | 1556833 | Comunicado ao Mercado | Apresentação Webcast 2T26 | chat 8369248929
