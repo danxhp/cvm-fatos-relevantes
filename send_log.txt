@@ -97,3 +97,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-13 21:05:51 | telegram | OK | YDUQ3 | 1557225 | Dados Econômico-Financeiros | Release 2T26 | chat 8369248929
 2026-08-13 21:15:44 | telegram | OK | YDUQ3 | 1557236 | Comunicado ao Mercado | Apresentação 2T26 | chat 1496332324
 2026-08-13 21:15:44 | telegram | OK | YDUQ3 | 1557236 | Comunicado ao Mercado | Apresentação 2T26 | chat 8369248929
+2026-08-13 22:51:13 | telegram | OK | DASA3 | 1557405 | Dados Econômico-Financeiros | Release de Resultados 2T26 | chat 1496332324
+2026-08-13 22:51:14 | telegram | OK | DASA3 | 1557405 | Dados Econômico-Financeiros | Release de Resultados 2T26 | chat 8369248929
+2026-08-13 22:51:14 | telegram | OK | DASA3 | 1557404 | Dados Econômico-Financeiros | Demonstrações Financeiras 2T26 | chat 1496332324
+2026-08-13 22:51:15 | telegram | OK | DASA3 | 1557404 | Dados Econômico-Financeiros | Demonstrações Financeiras 2T26 | chat 8369248929
