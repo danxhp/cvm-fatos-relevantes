@@ -8,7 +8,7 @@ Roda de minuto a minuto e avisa APENAS no Telegram (não envia email). Os destin
 lidos de email_config.json (bloco telegram.destinations) — os mesmos do monitor principal,
 ou seja, TODOS os configurados recebem (hoje: Danilo + Enzo). Dedup é por (protocolo, chat),
 então cada pessoa recebe cada doc uma vez e uma falha de envio é retentada só para quem faltou.
-Avisa (pop-up + som + Telegram) no PRIMEIRO documento de hoje e encerra; se nada sair, para à meia-noite.
+Envia TODOS os documentos de hoje de cada empresa (pop-up + som 1x por empresa); encerra quando todas reportarem (ou à meia-noite).
 
 Uso:
     py earnings_watch.py            # inicia o watcher (roda até meia-noite)
@@ -187,41 +187,42 @@ def run_watch() -> int:
     log(f"Destinos ({len(DESTINATIONS)}): {chats}. Encerra à meia-noite: {midnight:%Y-%m-%d %H:%M}.")
 
     seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
-    done: set = set()           # tickers cujo 1º doc já foi ENTREGUE a todos os destinos
     alerted: set = set()        # tickers que já dispararam pop-up + som (uma vez cada)
+    reported: set = set()       # tickers com pelo menos um doc entregue
+    last_delivery = None        # datetime da última entrega (para o "quieto por X min")
+    GRACE = timedelta(minutes=20)   # após todas reportarem, espera esse tempo sem novidade p/ encerrar
 
     broadcast(
         f"🟢 <b>Watcher {html.escape(WATCH_LABEL)} iniciado</b>\n"
         f"Vigiando <b>{', '.join(sorted(WATCH_TICKERS))}</b> (categoria {html.escape(WATCH_CATEGORY)}) "
-        f"de minuto a minuto. Aviso no 1º documento de CADA empresa; encerro quando todas saírem "
-        f"(ou à meia-noite {midnight:%H:%M})."
+        f"de minuto a minuto. Envio TODOS os documentos de hoje de cada empresa; encerro quando "
+        f"todas reportarem (ou à meia-noite {midnight:%H:%M})."
     )
     popup(f"Watcher {WATCH_LABEL} iniciado",
           f"Vigiando {', '.join(sorted(WATCH_TICKERS))} de minuto a minuto.\n"
-          f"Pop-up + som + Telegram no primeiro documento de cada empresa.")
+          f"Pop-up + som (1x por empresa) + Telegram para cada documento.")
 
     while True:
         now = datetime.now()
         if now >= midnight:
-            faltou = sorted(WATCH_TICKERS - done)
+            faltou = sorted(WATCH_TICKERS - reported)
             broadcast(
                 "🌙 <b>Watcher encerrado (meia-noite).</b>\n"
-                + (f"Saíram: {', '.join(sorted(done))}.\n" if done else "Nada saiu hoje.\n")
-                + (f"Não saíram: {', '.join(faltou)}." if faltou else "Todas saíram. ✅")
+                + (f"Reportaram: {', '.join(sorted(reported))}.\n" if reported else "Nada saiu hoje.\n")
+                + (f"Não reportaram: {', '.join(faltou)}." if faltou else "Todas reportaram. ✅")
             )
-            log(f"Encerrado à meia-noite. Saíram={sorted(done)} Faltou={faltou}")
+            log(f"Encerrado à meia-noite. Reportaram={sorted(reported)} Faltou={faltou}")
             return 0
 
         try:
-            # Para CADA empresa: avisa (pop-up + som + Telegram) no seu PRIMEIRO documento de hoje
-            # e a marca como 'done' (não repete depois). Encerra quando todas saírem. Só marca
-            # entregue se o envio deu certo — falha transitória é retentada no próximo minuto.
+            # Envia TODOS os documentos de hoje da categoria alvo (dedup por protocolo+chat), para
+            # NÃO perder o Release quando ele vem DEPOIS das Demonstrações/ITR. Pop-up + som uma
+            # vez por empresa (na 1ª detecção). Só marca entregue se o envio deu certo (retenta).
             for f in fetch_watch_filings(cvm.make_session()):
-                if not _is_today(f, today_str) or f.ticker in done:
+                if not _is_today(f, today_str):
                     continue
                 keys = _keys_for(f)
                 if all(k in seen for k in keys):
-                    done.add(f.ticker)      # já entregue (ex.: restart) — marca sem reenviar
                     continue
                 if f.ticker not in alerted:  # pop-up + som UMA vez por empresa, na detecção
                     alerted.add(f.ticker)
@@ -238,18 +239,21 @@ def run_watch() -> int:
                     if _post(d["bot_token"], d["chat_id"], text):
                         seen.add(key)
                         save_seen(seen)
+                        last_delivery = datetime.now()
                         log(f"ENTREGUE {f.ticker} | {(f.subject or f.doc_type)} | proto {f.protocol} | {f.filing_time} -> chat {d['chat_id']}")
                     else:
                         log(f"FALHA {f.ticker} | proto {f.protocol} -> chat {d['chat_id']} (retento no próximo minuto)")
-                if all(k in seen for k in keys):
-                    done.add(f.ticker)
-                    log(f"{f.ticker} capturada ({len(done)}/{len(WATCH_TICKERS)}).")
+                if all(k in seen for k in keys) and f.ticker not in reported:
+                    reported.add(f.ticker)
+                    log(f"{f.ticker} reportou ({len(reported)}/{len(WATCH_TICKERS)}).")
         except Exception as e:
             log(f"WARNING: erro no poll (segue no próximo minuto): {e}")
 
-        if done == WATCH_TICKERS:
-            broadcast(f"✅ <b>Todos os resultados saíram</b> ({', '.join(sorted(WATCH_TICKERS))}). Encerrando o watcher.")
-            log("Todas as empresas capturadas — encerrando (job done).")
+        # Encerra quando TODAS reportaram E ficou quieto por GRACE (pega o Release que sai após o DF).
+        if reported == WATCH_TICKERS and last_delivery and (datetime.now() - last_delivery) >= GRACE:
+            mins = int(GRACE.total_seconds() // 60)
+            broadcast(f"✅ <b>Todas reportaram</b> ({', '.join(sorted(WATCH_TICKERS))}) e sem novidade há {mins} min. Encerrando.")
+            log("Todas reportaram e quieto pela grace — encerrando (job done).")
             return 0
 
         time.sleep(POLL_SECONDS)
