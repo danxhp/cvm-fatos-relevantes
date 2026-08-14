@@ -83,10 +83,17 @@ USER_AGENT = (
 # Change this if you want another folder
 SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_FILE = SCRIPT_DIR / "seen_protocols.json"
+PENDING_FILE = SCRIPT_DIR / "pending_deliveries.json"
 LOG_FILE = SCRIPT_DIR / "monitor_log.txt"
 SEND_LOG_FILE = SCRIPT_DIR / "send_log.txt"
 SEND_LOG_HEADER = "timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe"
 ARCHIVE_FILE = SCRIPT_DIR / "fatos_arquivo.csv"
+
+# Um fato relevante só é marcado como "visto" depois de ENTREGUE. Enquanto não
+# for, fica em pending_deliveries.json e é retentado no ciclo seguinte. O teto
+# evita loop infinito num filing que nunca vai passar (ex.: HTML malformado que
+# o Telegram rejeita com 400): a ~5 min/ciclo, 6 tentativas ≈ 30 min de janela.
+MAX_DELIVERY_ATTEMPTS = 6
 ARCHIVE_HEADER = ["data", "ticker", "empresa", "categoria", "assunto", "protocolo", "link"]
 EMAIL_CONFIG_FILE = SCRIPT_DIR / "email_config.json"
 
@@ -226,6 +233,33 @@ def load_seen_protocols() -> Set[str]:
 def save_seen_protocols(protocols: Set[str]) -> None:
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(sorted(protocols), f, ensure_ascii=False, indent=2)
+
+
+def load_pending() -> Dict[str, Dict]:
+    """
+    Fatos relevantes detectados mas ainda NÃO entregues em todos os canais.
+    Formato: {protocolo: {"attempts": int, "first_seen": str, "identifier": str,
+                          "bullets": [str], "done": [chave_de_destino]}}
+    'done' guarda os destinos já confirmados (ex.: "telegram:123", "email"), para
+    que uma retentativa não duplique o que já chegou.
+    """
+    if not PENDING_FILE.exists():
+        return {}
+    try:
+        with open(PENDING_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        log(f"WARNING: failed to load pending file: {e}")
+        return {}
+
+
+def save_pending(pending: Dict[str, Dict]) -> None:
+    try:
+        with open(PENDING_FILE, "w", encoding="utf-8") as f:
+            json.dump(pending, f, ensure_ascii=False, indent=2, sort_keys=True)
+    except Exception as e:
+        log(f"ERROR: failed to save pending file: {e}")
 
 
 def make_session() -> requests.Session:
@@ -470,6 +504,37 @@ def build_download_url(filing: Filing) -> str:
 # MONITOR LOGIC
 # ============================================================================
 
+def raw_response_is_sane(raw: str) -> bool:
+    """
+    Canário do parser. `cvm_ok` não pode significar apenas "a CVM respondeu 200":
+    se o RAD mudar o formato do payload, parse_rows devolve lista vazia SEM lançar
+    exceção — e "parser quebrado" fica indistinguível de "não teve fato relevante".
+    O check ficaria verde para sempre e o silêncio pareceria normal.
+
+    A consulta é ampla (todas as categorias, período "esta semana", todas as
+    empresas — o filtro por empresa é local). Então uma resposta saudável SEMPRE
+    traz muitas linhas, mesmo que nenhuma seja das empresas monitoradas.
+    Duas anomalias derrubam cvm_ok e, via heartbeat, geram alerta:
+
+      1. zero linhas          -> endpoint mudou, ou passou a exigir sessão/captcha;
+      2. linhas sem o layout  -> o formato de colunas mudou (parse_rows descarta
+         esperado de colunas      silenciosamente tudo que tem < 11 colunas).
+    """
+    rows = [r for r in raw.split("&*") if r.strip()]
+    if not rows:
+        log("ERROR: CVM respondeu sem erro mas com ZERO linhas — "
+            "endpoint/payload provavelmente mudou. Tratando como falha.")
+        return False
+
+    parseable = sum(1 for r in rows if len(r.split("$&")) >= 11)
+    if parseable == 0:
+        log(f"ERROR: CVM devolveu {len(rows)} linha(s), nenhuma com o layout "
+            "esperado (>= 11 colunas) — formato mudou. Tratando como falha.")
+        return False
+
+    return True
+
+
 def gather_all_filings(session: requests.Session) -> Tuple[List[Filing], bool]:
     filings: List[Filing] = []
     cvm_ok = False  # True se a CVM respondeu sem erro
@@ -479,7 +544,7 @@ def gather_all_filings(session: requests.Session) -> Tuple[List[Filing], bool]:
     try:
         raw = fetch_raw_documents(session, CVM_ALL_CATEGORIES)
         filings.extend(parse_rows(raw))
-        cvm_ok = True
+        cvm_ok = raw_response_is_sane(raw)
     except Exception as e:
         log(f"WARNING: CVM fetch failed: {e}")
 
@@ -505,12 +570,14 @@ def check_once(
         log(f"Bootstrap complete. Marked {len(filings)} protocols as seen.")
         return [], len(filings), cvm_ok
 
+    # NÃO marca como visto aqui. Um filing só entra em seen_protocols.json depois
+    # de ENTREGUE (ver deliver_filings). Marcar na detecção fazia com que uma falha
+    # de envio — Telegram fora do ar, token revogado — descartasse o fato relevante
+    # para sempre: o run saía com exit 0, o heartbeat pingava verde, o Actions
+    # commitava o protocolo como visto, e o ciclo seguinte não retentava.
+    # Filings ainda pendentes continuam fora de seen, então reaparecem aqui
+    # naturalmente como "novos" no próximo ciclo e são retentados.
     new_filings = [f for f in filings if f.unique_key not in seen]
-
-    if new_filings:
-        for f in new_filings:
-            seen.add(f.unique_key)
-        save_seen_protocols(seen)
 
     return new_filings, len(filings), cvm_ok
 
@@ -959,28 +1026,33 @@ def _render_filing_telegram(filing: Filing, bullets: Optional[List[str]]) -> str
     return "\n".join(lines)[:4000]
 
 
+def _send_telegram_to_dest(dest: Dict, filing: Filing, text: str) -> bool:
+    """Envia para UM destino. Isolado para que a retentativa possa pular os
+    destinos já confirmados e não duplicar mensagem em quem já recebeu."""
+    chat_id = dest["chat_id"]
+    api_url = f"https://api.telegram.org/bot{dest['bot_token']}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
+    try:
+        r = requests.post(api_url, json=payload, timeout=30)
+        r.raise_for_status()
+        log(f"Telegram enviado (chat {chat_id}): {filing.identifier}")
+        log_send("telegram", filing, True, f"chat {chat_id}")
+        return True
+    except Exception as ex:
+        log(f"ERROR ao enviar Telegram (chat {chat_id}) para {filing.identifier}: {ex}")
+        log_send("telegram", filing, False, f"chat {chat_id}: {ex}")
+        return False
+
+
 def _send_one_telegram(cfg: Dict, filing: Filing, bullets: Optional[List[str]]) -> bool:
     text = _render_filing_telegram(filing, bullets)
-    ok_all = True
-    for dest in cfg["destinations"]:
-        chat_id = dest["chat_id"]
-        api_url = f"https://api.telegram.org/bot{dest['bot_token']}/sendMessage"
-        payload = {
-            "chat_id": chat_id,
-            "text": text,
-            "parse_mode": "HTML",
-            "disable_web_page_preview": True,
-        }
-        try:
-            r = requests.post(api_url, json=payload, timeout=30)
-            r.raise_for_status()
-            log(f"Telegram enviado (chat {chat_id}): {filing.identifier}")
-            log_send("telegram", filing, True, f"chat {chat_id}")
-        except Exception as ex:
-            log(f"ERROR ao enviar Telegram (chat {chat_id}) para {filing.identifier}: {ex}")
-            log_send("telegram", filing, False, f"chat {chat_id}: {ex}")
-            ok_all = False
-    return ok_all
+    results = [_send_telegram_to_dest(d, filing, text) for d in cfg["destinations"]]
+    return all(results)
 
 
 def send_telegram_alert(
@@ -991,6 +1063,87 @@ def send_telegram_alert(
     summaries = summaries or {}
     for filing in new_filings:
         _send_one_telegram(cfg, filing, summaries.get(filing.protocol))
+
+
+def deliver_filings(
+    new_filings: List[Filing],
+    summaries: Dict[str, List[str]],
+    pending: Dict[str, Dict],
+) -> Tuple[Set[str], Dict[str, Dict]]:
+    """
+    Entrega cada filing em TODOS os canais habilitados e devolve
+    (chaves_para_marcar_como_vistas, pending_atualizado).
+
+    Uma chave só entra em 'delivered' quando todos os destinos exigidos
+    confirmaram — ou quando o teto de tentativas é atingido (aí desiste, mas
+    grita no log e no send_log em vez de sumir em silêncio).
+    """
+    email_cfg = load_email_config()
+    tg_cfg = get_telegram_config()
+
+    required: List[str] = []
+    if email_cfg:
+        required.append("email")
+    if tg_cfg:
+        required.extend(f"telegram:{d['chat_id']}" for d in tg_cfg["destinations"])
+
+    delivered: Set[str] = set()
+
+    if not required:
+        log("WARNING: nenhum canal habilitado — marcando como visto sem entregar.")
+        for f in new_filings:
+            delivered.add(f.unique_key)
+            pending.pop(f.unique_key, None)
+        return delivered, pending
+
+    for f in new_filings:
+        key = f.unique_key
+        entry = pending.get(key) or {
+            "attempts": 0,
+            "first_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "identifier": f.identifier,
+            "bullets": summaries.get(f.protocol) or [],
+            "done": [],
+        }
+        done = set(entry.get("done", []))
+        # Resumo do Claude é caro: numa retentativa reusa o que já foi gerado.
+        bullets = entry.get("bullets") or summaries.get(f.protocol)
+
+        if email_cfg and "email" not in done:
+            if _send_one_email(email_cfg, f, bullets):
+                done.add("email")
+
+        if tg_cfg:
+            text = _render_filing_telegram(f, bullets)
+            for d in tg_cfg["destinations"]:
+                dest_key = f"telegram:{d['chat_id']}"
+                if dest_key in done:
+                    continue  # já chegou numa tentativa anterior
+                if _send_telegram_to_dest(d, f, text):
+                    done.add(dest_key)
+
+        entry["attempts"] = entry.get("attempts", 0) + 1
+        entry["done"] = sorted(done)
+        entry["bullets"] = bullets or []
+        faltou = [r for r in required if r not in done]
+
+        if not faltou:
+            delivered.add(key)
+            pending.pop(key, None)
+        elif entry["attempts"] >= MAX_DELIVERY_ATTEMPTS:
+            log(f"ERROR: DESISTINDO de {f.identifier} após {entry['attempts']} "
+                f"tentativas. Nunca entregue em: {', '.join(faltou)}")
+            log_send("giveup", f, False,
+                     f"{entry['attempts']} tentativas; faltou {', '.join(faltou)}")
+            delivered.add(key)  # evita retentar para sempre
+            pending.pop(key, None)
+        else:
+            pending[key] = entry
+            log(f"WARNING: entrega parcial de {f.identifier} "
+                f"(tentativa {entry['attempts']}/{MAX_DELIVERY_ATTEMPTS}) — "
+                f"pendente em: {', '.join(faltou)}. Será retentado.")
+
+    return delivered, pending
 
 
 def format_new_filings(
@@ -1062,9 +1215,16 @@ def main() -> int:
 
         new_filings, total_matched, cvm_ok = check_once(session, bootstrap=False)
 
+        pending = load_pending()
+
         summaries: Dict[str, List[str]] = {}
         if new_filings:
-            summaries = gather_summaries(session, new_filings)
+            # Numa retentativa o resumo já existe em pending — não repaga o Claude.
+            to_summarize = [
+                f for f in new_filings
+                if not (pending.get(f.unique_key) or {}).get("bullets")
+            ]
+            summaries = gather_summaries(session, to_summarize)
 
         if once:
             stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1080,13 +1240,19 @@ def main() -> int:
                 print(format_new_filings(new_filings, summaries))
 
         if new_filings:
-            archive_filings(new_filings)   # base histórica (registra o que foi detectado)
-            email_cfg = load_email_config()
-            if email_cfg:
-                send_email_alert(email_cfg, new_filings, summaries)
-            tg_cfg = get_telegram_config()
-            if tg_cfg:
-                send_telegram_alert(tg_cfg, new_filings, summaries)
+            # Arquiva só na primeira detecção: uma retentativa não pode gerar
+            # linha duplicada no CSV histórico.
+            archive_filings([f for f in new_filings if f.unique_key not in pending])
+
+            delivered, pending = deliver_filings(new_filings, summaries, pending)
+
+            # Só agora marca como visto — e só o que foi de fato entregue.
+            if delivered:
+                seen = load_seen_protocols()
+                seen.update(delivered)
+                save_seen_protocols(seen)
+
+            save_pending(pending)
 
         # Heartbeat / dead-man's-switch: pinga só quando a checagem foi real
         # (CVM respondeu). Numa falha transitória da CVM NÃO pingamos — a "grace"

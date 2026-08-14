@@ -42,7 +42,7 @@ jobs:
           rm -f email_config.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add seen_protocols.json send_log.txt fatos_arquivo.csv
+          git add seen_protocols.json pending_deliveries.json send_log.txt fatos_arquivo.csv
           if git diff --staged --quiet; then
             echo "Nenhum protocolo novo, nada a commitar."
           else
