@@ -273,8 +273,47 @@ transitória cria um intervalo de ~2 ciclos. Regra: **`Period + Grace` deve cobr
    (tolera jitter, runs longos e 1–2 falhas transitórias sem alarme falso).
 3. Copie a **ping URL** (`https://hc-ping.com/<uuid>`) → coloque em `healthcheck_url`
    (no `email_config.json` local **e** no secret — ver abaixo).
-4. Os alertas vão para o email do cadastro (⚠️ *o email da conta healthchecks.io, que pode ser
-   diferente do de destino dos fatos relevantes*).
+4. Por padrão os alertas vão para o email do cadastro (⚠️ *o email da conta healthchecks.io, que
+   pode ser diferente do de destino dos fatos relevantes*). **Roteie para o Telegram** — ver abaixo.
+
+#### 3.1 Alerta do heartbeat no Telegram (não só email)
+
+Um watchdog que avisa por um canal que você não olha não é watchdog. Como o email está desativado
+(`enabled: false`) e a operação toda vive no Telegram, o alerta de "monitor caiu" tem que chegar
+**no mesmo lugar onde chegam os fatos relevantes**.
+
+Em vez da integração nativa do healthchecks (que usa o bot *deles*, num chat novo), use a
+integração **Webhook** apontando para o **seu** bot — assim o alerta cai no chat que você já lê.
+
+No healthchecks.io: **Integrations** → **Add Integration** → **Webhook**, e preencha os
+**dois** blocos (down e up):
+
+| Campo | Valor |
+|---|---|
+| Request method | `POST` |
+| URL (ambos) | `https://api.telegram.org/bot<BOT_TOKEN>/sendMessage` |
+| Request header | `Content-Type: application/json` |
+
+**Body — "when a check goes down":**
+```json
+{"chat_id":"<CHAT_ID>","text":"🔴 MONITOR CVM FORA DO AR\n\nSem sinal de vida desde $NOW.\nFatos relevantes podem estar passando sem alerta.\n\nActions: https://github.com/danxhp/cvm-fatos-relevantes/actions","disable_web_page_preview":true}
+```
+
+**Body — "when a check goes up":**
+```json
+{"chat_id":"<CHAT_ID>","text":"✅ MONITOR CVM NORMALIZADO\n\nVoltou a reportar em $NOW."}
+```
+
+> ⚠️ `<BOT_TOKEN>` e `<CHAT_ID>` são os mesmos do bloco `telegram` do `email_config.json` — pegue
+> de lá e cole **só no painel do healthchecks**. **Nunca** commite o token: este repositório é
+> **público**.
+
+`$NOW` é uma variável do healthchecks (também existem `$NAME`, `$STATUS`, `$CODE`). Evite `$NAME`
+dentro do JSON: se o nome do check tiver aspas, quebra o payload.
+
+Para alertar mais de um destino, crie **uma integração Webhook por `chat_id`**. Na prática,
+alerta operacional só interessa a quem mantém o sistema — os demais destinatários querem os fatos
+relevantes, não o ruído de infraestrutura.
 
 ### 4. Secrets necessários
 
