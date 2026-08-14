@@ -111,3 +111,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-14 18:40:37 | telegram | OK | DASA3 | 1557797 | Comunicado ao Mercado | Apresentação Resultados 2T26 | chat 8369248929
 2026-08-14 21:12:02 | telegram | OK | ONCO3 | 1558106 | Dados Econômico-Financeiros | Release de Resultados do 2T26 | chat 1496332324
 2026-08-14 21:12:03 | telegram | OK | ONCO3 | 1558106 | Dados Econômico-Financeiros | Release de Resultados do 2T26 | chat 8369248929
+2026-08-14 21:50:31 | telegram | OK | VIVT3 | 1558156 | Aviso aos Acionistas | Deliberação de JSCP | chat 1496332324
+2026-08-14 21:50:31 | telegram | OK | VIVT3 | 1558156 | Aviso aos Acionistas | Deliberação de JSCP | chat 8369248929
