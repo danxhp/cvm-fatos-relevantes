@@ -1252,7 +1252,9 @@ def main() -> int:
                 seen.update(delivered)
                 save_seen_protocols(seen)
 
-            save_pending(pending)
+        # Sempre grava (mesmo vazio): o workflow faz `git add pending_deliveries.json`
+        # e `git add` aborta se o caminho não existir, derrubando o step de commit.
+        save_pending(pending)
 
         # Heartbeat / dead-man's-switch: pinga só quando a checagem foi real
         # (CVM respondeu). Numa falha transitória da CVM NÃO pingamos — a "grace"
