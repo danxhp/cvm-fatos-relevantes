@@ -30,6 +30,7 @@ no `email_config.json`; basta voltar a `true` e re-subir o secret para reativar.
   - [2. Disparo externo confiável (cron-job.org → workflow_dispatch)](#2-disparo-externo-confiável-cron-joborg--workflow_dispatch)
   - [3. Heartbeat / dead-man's-switch (healthchecks.io)](#3-heartbeat--dead-mans-switch-healthchecksio)
   - [4. Secrets necessários](#4-secrets-necessários)
+- [Falhas silenciosas: o que o heartbeat NÃO vê](#falhas-silenciosas-o-que-o-heartbeat-não-vê)
 - [Operação: como saber se está vivo](#operação-como-saber-se-está-vivo)
 - [Reaproveitar este método em outros monitores](#reaproveitar-este-método-em-outros-monitores)
 - [Watcher pontual de resultados (`earnings_watch.py`)](#watcher-pontual-de-resultados-earnings_watchpy)
@@ -39,7 +40,7 @@ no `email_config.json`; basta voltar a `true` e re-subir o secret para reativar.
 ## Como funciona
 
 ```
-cron-job.org (a cada 15 min)
+cron-job.org (a cada 5 min)
       │  POST autenticado → workflow_dispatch
       ▼
 GitHub Actions  (.github/workflows/monitor.yml)
@@ -47,6 +48,8 @@ GitHub Actions  (.github/workflows/monitor.yml)
       ▼
 CVM (endpoint interno) + SEC (API oficial)
       │  lista documentos recentes das empresas monitoradas
+      │  → sanidade do payload (raw_response_is_sane): resposta vazia ou
+      │    fora do layout = falha, NÃO "não teve fato relevante"
       ▼
 Deduplica contra seen_protocols.json
       │  o que é novo →
@@ -54,12 +57,18 @@ Deduplica contra seen_protocols.json
 Claude (Haiku) resume o documento em bullets
       ▼
 Telegram (um bot por destino)   ·   email (SMTP/Brevo) desativado (enabled=false)
-      │
-      └── ao final: ping no healthchecks.io ("estou vivo")
+      │  → só o que foi CONFIRMADO entra em seen_protocols.json;
+      │    o resto fica em pending_deliveries.json e é retentado
+      ▼
+ping no healthchecks.io ("estou vivo") — só se a CVM respondeu de forma sã
 ```
 
-O estado (`seen_protocols.json`) é commitado de volta ao repositório pelo próprio Actions,
-para sobreviver entre execuções.
+O estado (`seen_protocols.json` e `pending_deliveries.json`) é commitado de volta ao repositório
+pelo próprio Actions, para sobreviver entre execuções.
+
+> Quem **executa** é sempre o GitHub Actions. O cron-job.org não roda código nenhum: ele só toca a
+> campainha (`workflow_dispatch`). Isso importa na hora de diagnosticar — ver
+> [seção 1](#1-o-problema-do-cron-do-github).
 
 ---
 
@@ -69,7 +78,8 @@ para sobreviver entre execuções.
 |---|---|
 | `cvm_fatos_relevantes_claude.py` | O monitor. Toda a lógica está aqui. |
 | `.github/workflows/monitor.yml` | Workflow do GitHub Actions que executa o monitor. |
-| `seen_protocols.json` | "Memória" do que já foi visto. **Autoritativo no GitHub** (o Actions commita de volta). |
+| `seen_protocols.json` | "Memória" do que já foi **entregue** (não do que foi detectado — ver [Falhas silenciosas](#falhas-silenciosas-o-que-o-heartbeat-não-vê)). **Autoritativo no GitHub** (o Actions commita de volta). |
+| `pending_deliveries.json` | Fatos detectados e **ainda não entregues** em todos os destinos: tentativas, destinos já confirmados e o resumo do Claude já gerado. Normalmente `{}`. Versionado e commitado de volta — sem isso o contador de tentativas zeraria a cada run na nuvem. |
 | `send_log.txt` | Registro **durável** de cada envio (email/telegram), separado por ` \| `. Versionado e commitado de volta pelo Actions. |
 | `fatos_arquivo.csv` | **Base histórica** dos fatos relevantes/avisos detectados (`data, ticker, empresa, categoria, assunto, protocolo, link` — sem resumo). CSV, versionado e commitado de volta. Acumula a partir de 2026-07-26. |
 | `email_config.json` | Credenciais SMTP, chave da Anthropic, destinatários, URL do heartbeat, bloco Telegram. **Email desativado** (`enabled: false`). **Não versionado** (`.gitignore`); na nuvem é recriado do secret. |
@@ -172,9 +182,20 @@ Esta é a parte que faz o monitor rodar sozinho 24/7. São três peças:
 
 O jeito "óbvio" é usar o gatilho `schedule:` do próprio GitHub Actions. **Não confie nele para
 cadência curta.** O cron interno do GitHub é *best-effort*: em horários de pico ele **atrasa ou
-simplesmente pula a execução**, sem gerar erro. Na prática, um `schedule` de 15 min chega a rodar
-apenas ~1 a cada 6 vezes, com buracos de horas. Isso vale para repositório público e privado, e
+simplesmente pula a execução**, sem gerar erro. Isso vale para repositório público e privado, e
 **não melhora em planos pagos** — é uma limitação da plataforma, não da sua conta.
+
+O ponto importante é *qual* das duas coisas falha: o Actions é excelente **executando** e ruim
+**acordando na hora**. Medição de 14/08/2026, 200 runs numa janela de 15,5h:
+
+| | Disparo externo (`workflow_dispatch`) | `schedule` nativo do GitHub |
+|---|---|---|
+| Atraso | ~3 a 7 s | **1min40s a 14min40s** (mediana ~9 min) |
+| Gap mediano entre runs | **300 s** (exatos 5 min) | — |
+| Conclusão | 200/200 `success` | 200/200 `success` |
+
+Ou seja: a execução nunca foi o problema. Por isso o `schedule` continua ligado como rede de
+segurança de *"eventualmente"*, mas **não** como garantia de latência.
 
 Solução: **manter o Actions como executor, mas tirar o agendamento de dentro dele.** Quem puxa o
 gatilho passa a ser um serviço de cron externo confiável, via `workflow_dispatch`.
@@ -228,7 +249,7 @@ Atenção à interface: **URL, Request method e Request body são campos do form
 | **URL** (campo Address) | `https://api.github.com/repos/USUARIO/REPO/actions/workflows/monitor.yml/dispatches` |
 | **Request method** | `POST` |
 | **Request body** | `{"ref":"main"}` |
-| **Execution schedule** | a cada 15 min (`*/15`) |
+| **Execution schedule** | a cada 5 min (`*/5`) |
 
 Na seção **Headers**, adicione exatamente estas 4 linhas (Key → Value):
 
@@ -370,14 +391,79 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
 
 ---
 
+## Falhas silenciosas: o que o heartbeat NÃO vê
+
+O heartbeat cobre bem o eixo *"o monitor parou de rodar"* — GitHub fora do ar, CVM fora do ar.
+São falhas **ruidosas**: o ping some e o alerta dispara.
+
+Ele é cego para o outro eixo: *"o monitor roda, fica verde, e mesmo assim você não recebe"*.
+Essa é a falha que machuca, porque não tem sintoma — você não recebe nada e conclui que não houve
+fato relevante. Duas dessas foram fechadas em código:
+
+### 1. Entrega confirmada antes de marcar como visto
+
+**O que acontecia:** `check_once()` marcava o protocolo como visto **na detecção**, antes de
+qualquer envio, e `send_telegram_alert()` descartava o retorno de `_send_one_telegram()`. Com o
+Telegram fora do ar o run saía com **exit 0**, pingava o heartbeat (**verde**), e o Actions
+commitava o protocolo como visto. O ciclo seguinte não retentava: o fato relevante era detectado,
+arquivado e **nunca entregue**, deixando como único vestígio uma linha `FAIL` no `send_log.txt`.
+
+**Como funciona agora** (`deliver_filings()`):
+
+- um protocolo só entra em `seen_protocols.json` depois que **todos** os destinos confirmam;
+- o que não foi entregue fica em `pending_deliveries.json` e, como continua fora de `seen`,
+  reaparece naturalmente como "novo" no ciclo seguinte e é retentado;
+- o rastreio é **por destino** (`telegram:<chat_id>`, `email`): a retentativa pula quem já
+  recebeu, então ninguém leva mensagem duplicada;
+- o resumo do Claude fica guardado na pendência — retentar não repaga a API;
+- após `MAX_DELIVERY_ATTEMPTS` (6 ≈ 30 min) desiste, mas grava um registro `giveup` no
+  `send_log.txt`. Desistir é aceitável; desistir **em silêncio** não é.
+
+> Por que existe um teto: sem ele, um filing que o Telegram rejeita de forma determinística
+> (ex.: HTML malformado devolvendo 400) seria retentado para sempre, a cada 5 minutos.
+
+### 2. Canário do parser (`raw_response_is_sane()`)
+
+**O que acontecia:** `cvm_ok` significava apenas *"não lançou exceção"*. Se o RAD mudasse o
+formato do payload, `parse_rows()` devolveria **lista vazia sem erro** — e "parser quebrado"
+ficaria indistinguível de "não teve fato relevante hoje". O check ficaria verde para sempre e o
+silêncio pareceria normal.
+
+**Como funciona agora:** a consulta é ampla (todas as categorias, período "esta semana", todas as
+empresas — o filtro por empresa é local), então uma resposta saudável **sempre** traz muitas
+linhas, mesmo que nenhuma seja das empresas monitoradas. Referência: em 14/08/2026 o endpoint
+devolvia **2.320 linhas**. Duas anomalias derrubam `cvm_ok` e, via heartbeat, viram alerta:
+
+| Anomalia | Significa |
+|---|---|
+| zero linhas | endpoint mudou, ou passou a exigir sessão/captcha |
+| nenhuma linha com ≥ 11 colunas | o layout de colunas mudou (`parse_rows` descarta em silêncio o que não bate) |
+
+### O que continua descoberto
+
+- **Telegram fora do ar por > 30 min** — passa do teto de tentativas. Fica registrado como
+  `giveup` no `send_log.txt`, mas o alerta disso também iria pelo Telegram, que é justamente o
+  canal quebrado. Ponto cego assumido.
+- **cron-job.org cair** — o `schedule` do GitHub assume e você degrada de 5 para ~25 min, possivelmente
+  sem alerta, porque o heartbeat pode continuar sendo pingado dentro da janela de 15 min.
+  Mitigação seria um segundo gatilho independente (não implementado).
+- **healthchecks.io cair** — ninguém vigia o vigia.
+
+---
+
 ## Operação: como saber se está vivo
 
 - **Execuções:** aba *Actions* do repositório, ou `gh run list --workflow=monitor.yml`.
 - **Cadência real:** compare os horários dos runs — devem estar espaçados ~5 min (os disparos do
   cron-job.org). Runs `event=schedule` esparsos são o backup do GitHub; o principal é
   `event=workflow_dispatch`.
-- **Heartbeat:** o painel do healthchecks.io mostra o último ping; se ficar vermelho, você recebe
-  o alerta por email — é o seu sinal de que algo na cadeia travou.
+- **Heartbeat:** o painel do healthchecks.io mostra o último ping; se ficar vermelho, o alerta cai
+  no **Telegram** (ver [seção 3.1](#31-alerta-do-heartbeat-no-telegram-não-só-email)) e no email
+  da conta — é o seu sinal de que algo na cadeia travou.
+- **Entregas pendentes:** [`pending_deliveries.json`](pending_deliveries.json) deve estar `{}` em
+  regime normal. Se tiver conteúdo, há fato relevante detectado que **ainda não chegou** em algum
+  destino — o campo `attempts` mostra há quantos ciclos. Procure `giveup` no `send_log.txt` para
+  ver o que foi abandonado após o teto de tentativas.
 - **Histórico de envios:** [`send_log.txt`](send_log.txt) tem uma linha por envio (email e
   telegram separados), com `status` `OK`/`FAIL` e detalhe do erro quando falha. É durável (o
   Actions commita de volta), então serve de auditoria: `2026-... | telegram | OK | RDOR3 | ...`.
@@ -385,9 +471,15 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
   relevante/aviso detectado (`data, ticker, empresa, categoria, assunto, protocolo, link`). Abre
   no Excel/Sheets — dá para filtrar por empresa, contar por período, etc. Só metadados + título,
   sem o resumo do Claude.
-- **Falha silenciosa da CVM:** se a CVM estiver fora, o run passa "verde" mas o heartbeat **não
-  pinga**. Uma falha isolada é absorvida pela *grace*; se a CVM ficar fora por vários runs, os
-  pings cessam e o healthchecks.io te alerta pelo silêncio.
+- **Falha silenciosa da CVM:** se a CVM estiver fora — ou responder num formato que o parser não
+  reconhece (ver [canário](#2-canário-do-parser-raw_response_is_sane)) — o run passa "verde" mas o
+  heartbeat **não pinga**. Uma falha isolada é absorvida pela *grace*; se persistir por vários
+  runs, os pings cessam e o healthchecks.io te alerta pelo silêncio.
+
+> ⚠️ **O que NÃO é monitorado.** O heartbeat só enxerga o eixo "parou de rodar". Falha de entrega
+> por mais de ~30 min, queda do cron-job.org (degrada a cadência sem necessariamente alertar) e
+> queda do próprio healthchecks.io continuam descobertos — ver
+> [Falhas silenciosas](#falhas-silenciosas-o-que-o-heartbeat-não-vê).
 
 ---
 
