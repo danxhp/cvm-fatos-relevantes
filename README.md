@@ -302,19 +302,38 @@ preenche **os dois**.
 
 **Body — "when a check goes down":**
 ```json
-{"chat_id":"<CHAT_ID>","text":"🔴 MONITOR CVM FORA DO AR\n\nSem sinal de vida desde $NOW.\nFatos relevantes podem estar passando sem alerta.\n\nActions: https://github.com/danxhp/cvm-fatos-relevantes/actions","disable_web_page_preview":true}
+{"chat_id":"<CHAT_ID>","text":"🔴 MONITOR CVM FORA DO AR\n\nParou de dar sinal de vida — fatos relevantes podem estar passando sem alerta.\n\nActions: https://github.com/danxhp/cvm-fatos-relevantes/actions","disable_web_page_preview":true}
 ```
 
 **Body — "when a check goes up":**
 ```json
-{"chat_id":"<CHAT_ID>","text":"✅ MONITOR CVM NORMALIZADO\n\nVoltou a reportar em $NOW."}
+{"chat_id":"<CHAT_ID>","text":"✅ MONITOR CVM NORMALIZADO\n\nVoltou a reportar normalmente."}
 ```
+
+**Por que não tem horário na mensagem.** Tentador colocar `$NOW`, mas ele erra duas vezes:
+
+- **Fuso.** `$NOW` é a hora **UTC** em ISO 8601 (`2026-08-14T20:02:02+00:00`) — 3h à frente de
+  Brasília e num formato ilegível. Os placeholders do healthchecks são substituição literal de
+  string, não um template engine: **não há formatação de data nem conversão de fuso**, e muito
+  menos lógica de "ontem/hoje".
+- **Semântica.** `$NOW` é a hora em que o **alerta dispara**, não a hora em que o monitor morreu.
+  O check só vira `down` depois de `Period + Grace` (~15 min) de silêncio — então "sem sinal desde
+  $NOW" na verdade queria dizer "desde agora", errando ~15 min *além* das 3h de fuso.
+
+O **Telegram já resolve isso de graça**: cada mensagem carrega o horário no seu fuso local, e o
+app agrupa a conversa sob separadores **"Hoje" / "Ontem" / "14 de agosto de 2026"**. É exatamente
+o formato desejado, renderizado nativamente e sempre correto. Duplicar isso no corpo da mensagem
+só acrescenta um segundo horário — em UTC e defasado — para conflitar com o que o app já mostra.
+
+Para saber o horário exato do último ping bem-sucedido, o painel do healthchecks mostra no fuso da
+conta. A mensagem serve para **avisar**, não para ser o registro forense.
 
 > ⚠️ `<BOT_TOKEN>` e `<CHAT_ID>` são os mesmos do bloco `telegram` do `email_config.json` — pegue
 > de lá e cole **só no painel do healthchecks**. **Nunca** commite o token: este repositório é
 > **público**.
 
-`$NOW` é uma variável do healthchecks (também existem `$NAME`, `$STATUS`, `$CODE`). Evite `$NAME`
+Os placeholders disponíveis (`$NAME`, `$STATUS`, `$CODE`, `$NOW`, `$TAGS`…) estão linkados no
+próprio formulário, em *"(available placeholders)"*. Evite `$NAME`
 dentro do JSON: se o nome do check tiver aspas, quebra o payload.
 
 Para alertar mais de um destino, crie **uma integração Webhook por `chat_id`**. Na prática,
