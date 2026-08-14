@@ -285,14 +285,20 @@ Um watchdog que avisa por um canal que você não olha não é watchdog. Como o 
 Em vez da integração nativa do healthchecks (que usa o bot *deles*, num chat novo), use a
 integração **Webhook** apontando para o **seu** bot — assim o alerta cai no chat que você já lê.
 
-No healthchecks.io: **Integrations** → **Add Integration** → **Webhook**, e preencha os
-**dois** blocos (down e up):
+No healthchecks.io: **Integrations** → **Add Integration** → **Webhook**. O formulário tem dois
+blocos independentes — *"Execute when a check goes **down**"* e *"...goes **up**"* — e você
+preenche **os dois**.
+
+> ⚠️ **Primeiro mude o dropdown de `GET` para `POST`, nos dois lados.** Enquanto estiver em `GET`
+> o formulário mostra só *URL* e *Request Headers*; o campo **Request Body** só aparece depois de
+> trocar o método. É o passo que trava todo mundo.
 
 | Campo | Valor |
 |---|---|
-| Request method | `POST` |
-| URL (ambos) | `https://api.telegram.org/bot<BOT_TOKEN>/sendMessage` |
-| Request header | `Content-Type: application/json` |
+| Name | `Check Telegram CVM Fatos Relevantes` (livre) |
+| Método (ambos os lados) | **`POST`** ← trocar antes de tudo |
+| URL (ambos os lados) | `https://api.telegram.org/bot<BOT_TOKEN>/sendMessage` |
+| Request Headers (ambos) | `Content-Type: application/json` |
 
 **Body — "when a check goes down":**
 ```json
