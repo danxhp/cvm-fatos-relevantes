@@ -129,3 +129,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-19 21:35:33 | telegram | OK | QUAL3 | 1559556 | Comunicado ao Mercado | Institucional 2T26 | chat 8369248929
 2026-08-19 22:25:33 | telegram | OK | ANIM3 | 1559624 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 1496332324
 2026-08-19 22:25:34 | telegram | OK | ANIM3 | 1559624 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
+2026-08-20 20:50:31 | telegram | OK | ONCO3 | 1559907 | Fato Relevante | Finalização da venda de participação na JV da Arábia Saudita | chat 1496332324
+2026-08-20 20:50:31 | telegram | OK | ONCO3 | 1559907 | Fato Relevante | Finalização da venda de participação na JV da Arábia Saudita | chat 8369248929
