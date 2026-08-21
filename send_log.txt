@@ -131,3 +131,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-19 22:25:34 | telegram | OK | ANIM3 | 1559624 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
 2026-08-20 20:50:31 | telegram | OK | ONCO3 | 1559907 | Fato Relevante | Finalização da venda de participação na JV da Arábia Saudita | chat 1496332324
 2026-08-20 20:50:31 | telegram | OK | ONCO3 | 1559907 | Fato Relevante | Finalização da venda de participação na JV da Arábia Saudita | chat 8369248929
+2026-08-21 11:30:23 | telegram | OK | HAPV3 | 1560072 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 | chat 1496332324
+2026-08-21 11:30:23 | telegram | OK | HAPV3 | 1560072 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 | chat 8369248929
