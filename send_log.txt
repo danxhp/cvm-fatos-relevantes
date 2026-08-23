@@ -135,3 +135,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-21 11:30:23 | telegram | OK | HAPV3 | 1560072 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 | chat 8369248929
 2026-08-21 23:05:21 | telegram | OK | FLRY3 | 1560490 | Comunicado ao Mercado | Liquidação da 11ª Debêntures da Cia | chat 1496332324
 2026-08-21 23:05:21 | telegram | OK | FLRY3 | 1560490 | Comunicado ao Mercado | Liquidação da 11ª Debêntures da Cia | chat 8369248929
+2026-08-23 20:55:25 | telegram | OK | QUAL3 | 1560516 | Comunicado ao Mercado | eleição de novo diretor | chat 1496332324
+2026-08-23 20:55:26 | telegram | OK | QUAL3 | 1560516 | Comunicado ao Mercado | eleição de novo diretor | chat 8369248929
