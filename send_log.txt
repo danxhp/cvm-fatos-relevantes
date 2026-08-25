@@ -149,3 +149,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-25 00:05:27 | telegram | OK | HAPV3 | 1560881 | Comunicado ao Mercado | Esclareciemntos sobre questionamento da CVM/B3 | chat 8369248929
 2026-08-25 00:05:27 | telegram | OK | HAPV3 | 1560880 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 1496332324
 2026-08-25 00:05:28 | telegram | OK | HAPV3 | 1560880 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
+2026-08-25 13:45:24 | telegram | OK | HAPV3 | 1560942 | Comunicado ao Mercado | Esclarecimentos sobre questionamento da CVM/B3 | chat 1496332324
+2026-08-25 13:45:25 | telegram | OK | HAPV3 | 1560942 | Comunicado ao Mercado | Esclarecimentos sobre questionamento da CVM/B3 | chat 8369248929
