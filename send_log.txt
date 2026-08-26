@@ -155,3 +155,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-25 14:05:36 | telegram | OK | BLAU3 | 1560945 | Dados Econômico-Financeiros | Demonstrações Financeiras 2T26 | chat 8369248929
 2026-08-25 23:25:23 | telegram | OK | HAPV3 | 1561425 | Comunicado ao Mercado | Redução da Dívida: Recompra de Debêntures e Liquidação Antecipada de Hedge | chat 1496332324
 2026-08-25 23:25:23 | telegram | OK | HAPV3 | 1561425 | Comunicado ao Mercado | Redução da Dívida: Recompra de Debêntures e Liquidação Antecipada de Hedge | chat 8369248929
+2026-08-26 02:10:22 | telegram | OK | ONCO3 | 1561438 | Fato Relevante | Decisão CVM - OPA | chat 1496332324
+2026-08-26 02:10:22 | telegram | OK | ONCO3 | 1561438 | Fato Relevante | Decisão CVM - OPA | chat 8369248929
