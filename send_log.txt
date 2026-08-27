@@ -161,3 +161,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-26 21:15:22 | telegram | OK | YDUQ3 | 1561709 | Comunicado ao Mercado | Liquidação da 13ª emissão de debêntures | chat 8369248929
 2026-08-27 01:45:23 | telegram | OK | ONCO3 | 1561780 | Fato Relevante | Atualização da minuta do plano da RE | chat 1496332324
 2026-08-27 01:45:24 | telegram | OK | ONCO3 | 1561780 | Fato Relevante | Atualização da minuta do plano da RE | chat 8369248929
+2026-08-27 17:25:36 | telegram | OK | QUAL3 | 1561930 | Dados Econômico-Financeiros | Demonstrações Financeiras 2tri26- Versão em inglês | chat 1496332324
+2026-08-27 17:25:37 | telegram | OK | QUAL3 | 1561930 | Dados Econômico-Financeiros | Demonstrações Financeiras 2tri26- Versão em inglês | chat 8369248929
