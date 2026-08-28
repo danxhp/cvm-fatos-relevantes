@@ -165,3 +165,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-27 17:25:37 | telegram | OK | QUAL3 | 1561930 | Dados Econômico-Financeiros | Demonstrações Financeiras 2tri26- Versão em inglês | chat 8369248929
 2026-08-28 00:10:27 | telegram | OK | ONCO3 | 1562196 | Fato Relevante | Informações adicionais - OPA | chat 1496332324
 2026-08-28 00:10:28 | telegram | OK | ONCO3 | 1562196 | Fato Relevante | Informações adicionais - OPA | chat 8369248929
+2026-08-28 22:40:20 | telegram | OK | ONCO3 | 1562796 | Comunicado ao Mercado | Notícia veiculada na mídia | chat 1496332324
+2026-08-28 22:40:20 | telegram | OK | ONCO3 | 1562796 | Comunicado ao Mercado | Notícia veiculada na mídia | chat 8369248929
