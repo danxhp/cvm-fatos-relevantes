@@ -31,6 +31,7 @@ no `email_config.json`; basta voltar a `true` e re-subir o secret para reativar.
   - [2. Disparo externo confiável (cron-job.org → workflow_dispatch)](#2-disparo-externo-confiável-cron-joborg--workflow_dispatch)
   - [3. Heartbeat / dead-man's-switch (healthchecks.io)](#3-heartbeat--dead-mans-switch-healthchecksio)
   - [4. Secrets necessários](#4-secrets-necessários)
+- [Informe mensal de insiders e controlador](#informe-mensal-de-insiders-e-controlador)
 - [Por que o alerta traz DOIS links](#por-que-o-alerta-traz-dois-links)
 - [Falhas silenciosas: o que o heartbeat NÃO vê](#falhas-silenciosas-o-que-o-heartbeat-não-vê)
 - [Operação: como saber se está vivo](#operação-como-saber-se-está-vivo)
@@ -410,6 +411,31 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
 | Secret | Conteúdo |
 |---|---|
 | `EMAIL_CONFIG_JSON` | O `email_config.json` inteiro (SMTP + chave Anthropic + destinatários + `healthcheck_url`). |
+
+---
+
+## Informe mensal de insiders e controlador
+
+A categoria **"Valores Mobiliários Negociados e Detidos"** entrega o formulário mensal
+*"Negociação de Administradores e Pessoas Ligadas"* (tipos `Posição Consolidada` e
+`Posição Individual`). Por grupo — **Controlador**, Conselho de Administração, Diretoria,
+Conselho Fiscal — traz **saldo inicial**, **movimentações do mês** (dia, quantidade, preço,
+volume em R$) e **saldo final**, por espécie (ON/PN).
+
+> ⚠️ **Isto não é recompra da companhia.** É negociação de *insiders* e do controlador. A
+> recompra de ações próprias (tesouraria) é outra divulgação e **não sai por esta categoria**.
+
+**Tempestividade (medida, não estimada):** referência é o **mês fechado** (`08/2026`) e a
+entrega observada foi em **01/09/2026** — primeiro dia do mês seguinte, para as 18 companhias
+que protocolaram naquele momento. O prazo regulamentar é mais folgado que isso, então a cauda
+se estende pelos primeiros dias do mês; o dado chega **dias após o fechamento, não em tempo real**.
+
+Como o formulário é tabular, o prompt genérico produzia resumo vago. `CATEGORY_PROMPT_HINTS`
+injeta instrução específica para essa categoria, pedindo saldo final por espécie e as
+movimentações com preço e volume, e um único bullet curto quando não houve operações no mês.
+
+> **Ruído esperado:** o informe é mensal e obrigatório mesmo sem operações. Boa parte dos
+> alertas será "não houve movimentação no mês", para cada empresa e cada tipo de posição.
 
 ---
 

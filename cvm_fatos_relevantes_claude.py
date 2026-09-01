@@ -73,6 +73,13 @@ CVM_ALLOWED_CATEGORIES = {
     "Comunicado ao Mercado",
     "ITR - Informações Trimestrais",
     "Dados Econômico-Financeiros",
+    # Informe MENSAL "Negociação de Administradores e Pessoas Ligadas"
+    # (Posição Consolidada / Individual). Traz, por grupo — Controlador,
+    # Conselho, Diretoria, Conselho Fiscal —, saldo inicial, movimentações do
+    # mês (dia, quantidade, preço, volume em R$) e saldo final.
+    # ATENÇÃO: NÃO é recompra da companhia; é negociação de insiders e do
+    # controlador. Recompra de ações próprias sai por outro caminho.
+    "Valores Mobiliários Negociados e Detidos",
 }
 
 USER_AGENT = (
@@ -732,9 +739,33 @@ def fetch_document_text(
         return None
 
 
+# Instrução extra por categoria. O prompt genérico serve para comunicado em prosa;
+# um formulário tabular precisa de orientação específica, senão o resumo sai vago
+# ("a companhia informou suas posições") em vez de trazer os números.
+CATEGORY_PROMPT_HINTS = {
+    "Valores Mobiliários Negociados e Detidos": (
+        "Este é o informe MENSAL de negociação de administradores e pessoas ligadas. "
+        "Para CADA grupo presente (Controlador, Conselho de Administração, Diretoria, "
+        "Conselho Fiscal), reporte em um bullet: o grupo, a quantidade em SALDO FINAL por "
+        "espécie (ON/PN) e, se houve MOVIMENTAÇÕES NO MÊS, a quantidade comprada/vendida, "
+        "o preço e o volume em R$. "
+        "Se o formulário indicar que NÃO houve operações no mês, diga isso em UM único "
+        "bullet curto e não repita grupo por grupo. "
+        "Comece o primeiro bullet com o mês de referência. Os números são o mais "
+        "importante: transcreva-os com precisão, não arredonde."
+    ),
+}
+
+
+
 def summarize_filing(
     client: anthropic.Anthropic, filing: Filing, doc_text: str
 ) -> Optional[List[str]]:
+    hint = CATEGORY_PROMPT_HINTS.get(filing.category)
+    instrucao = hint or (
+        "Priorize: o evento principal, valores monetários, datas-chave, partes envolvidas, "
+        "e impacto esperado para acionistas."
+    )
     user_prompt = (
         f"Empresa: {filing.company_name} ({filing.ticker})\n"
         f"Assunto: {filing.subject or filing.doc_type}\n"
@@ -743,8 +774,7 @@ def summarize_filing(
         f"--- INÍCIO DO DOCUMENTO ---\n{doc_text}\n--- FIM DO DOCUMENTO ---\n\n"
         "Resuma o documento em 3 a 7 bullets curtos, cada um em uma linha começando com '- '. "
         "Sem introdução, sem conclusão — apenas os bullets. "
-        "Priorize: o evento principal, valores monetários, datas-chave, partes envolvidas, "
-        "e impacto esperado para acionistas."
+        + instrucao
     )
 
     try:
