@@ -30,6 +30,7 @@ no `email_config.json`; basta voltar a `true` e re-subir o secret para reativar.
   - [2. Disparo externo confiável (cron-job.org → workflow_dispatch)](#2-disparo-externo-confiável-cron-joborg--workflow_dispatch)
   - [3. Heartbeat / dead-man's-switch (healthchecks.io)](#3-heartbeat--dead-mans-switch-healthchecksio)
   - [4. Secrets necessários](#4-secrets-necessários)
+- [Por que o alerta traz DOIS links](#por-que-o-alerta-traz-dois-links)
 - [Falhas silenciosas: o que o heartbeat NÃO vê](#falhas-silenciosas-o-que-o-heartbeat-não-vê)
 - [Operação: como saber se está vivo](#operação-como-saber-se-está-vivo)
 - [Reaproveitar este método em outros monitores](#reaproveitar-este-método-em-outros-monitores)
@@ -388,6 +389,35 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
 | Secret | Conteúdo |
 |---|---|
 | `EMAIL_CONFIG_JSON` | O `email_config.json` inteiro (SMTP + chave Anthropic + destinatários + `healthcheck_url`). |
+
+---
+
+## Por que o alerta traz DOIS links
+
+Cada mensagem termina com **"Abrir documento"** e **"baixar PDF"**. Não é redundância:
+
+O endpoint de download do RAD (`frmDownloadDocumento.aspx`) devolve o PDF com o header
+**errado** — `Content-Type: text/html` — e depende do `Content-Disposition: attachment` para o
+navegador entender que é um arquivo:
+
+```
+HTTP/1.1 200 OK
+Content-Type: text/html                                  <- errado, o corpo e um PDF
+Content-disposition: attachment; filename=017671000101011.pdf
+%PDF-1.7 ...
+```
+
+Navegador de desktop honra o `Content-Disposition` e baixa certo. **O navegador embutido do
+Telegram no celular ignora**, obedece o `Content-Type` e tenta renderizar os bytes do PDF como
+HTML — o resultado é a tela cheia de `%PDF-1.7 ... obj ... xref`, que parece "um monte de código".
+
+Por isso o link primário passou a ser `frmExibirArquivoIPEExterno.aspx?NumeroProtocoloEntrega=<protocolo>`
+(`build_viewer_url()`), a página de visualização do RAD — HTML de verdade, com o PDF num iframe.
+Funciona em qualquer navegador. O link de download direto continua como segundo, porque no
+desktop baixar o arquivo costuma ser o que se quer.
+
+> Filings da SEC (AFYA) não passam por isso: a URL já é uma página normal. `build_viewer_url()`
+> devolve `None` e a mensagem sai com um link só.
 
 ---
 

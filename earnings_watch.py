@@ -52,6 +52,23 @@ SEEN_FILE = SCRIPT_DIR / "earnings_watch_seen.json"   # chaves "protocolo|chat" 
 import json
 
 
+def _doc_links(f) -> str:
+    """
+    Dois links: "Abrir" (viewer HTML do RAD) e "baixar PDF" (download direto).
+    O download direto quebra no navegador embutido do Telegram no celular — a
+    CVM serve o PDF com Content-Type: text/html e conta com o
+    Content-Disposition para o navegador baixar; o webview do Telegram ignora
+    isso e renderiza os bytes do PDF como texto. Ver build_viewer_url().
+    """
+    e = html.escape
+    dl = e(cvm.build_download_url(f))
+    viewer = cvm.build_viewer_url(f)
+    if viewer:
+        return (f'📄 <a href="{e(viewer)}">Abrir documento</a>'
+                f'  ·  <a href="{dl}">baixar PDF</a>')
+    return f'📄 <a href="{dl}">Abrir documento original</a>'
+
+
 def log(msg: str) -> None:
     line = f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}"
     print(line, flush=True)
@@ -150,7 +167,7 @@ def render(f) -> str:
         f"<b>{e(f.category)}</b>\n"
         f"{e(f.subject or f.doc_type or 'Documento')}\n"
         f"🗓 {e(f.filing_time or '')}\n\n"
-        f'<a href="{e(cvm.build_download_url(f))}">Baixar documento original</a>'
+        + _doc_links(f)
     )
 
 

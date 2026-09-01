@@ -59,6 +59,7 @@ for _stream in (sys.stdout, sys.stderr):
 BASE_URL = "https://www.rad.cvm.gov.br/ENET/"
 LIST_URL = BASE_URL + "frmConsultaExternaCVM.aspx/ListarDocumentos"
 DOWNLOAD_URL = BASE_URL + "frmDownloadDocumento.aspx"
+VIEWER_URL = BASE_URL + "frmExibirArquivoIPEExterno.aspx"
 CONSULTA_URL = BASE_URL + "frmConsultaExternaCVM.aspx"
 
 # Categorias monitoradas na CVM. Em vez de uma requisição por código de categoria,
@@ -498,6 +499,26 @@ def build_download_url(filing: Filing) -> str:
         return filing.download_params["_sec_url"]
     from urllib.parse import urlencode
     return DOWNLOAD_URL + "?" + urlencode(filing.download_params)
+
+
+def build_viewer_url(filing: Filing) -> Optional[str]:
+    """
+    Página de visualização do RAD (HTML com o PDF num iframe). None para filings
+    da SEC, que não têm equivalente.
+
+    Por que existe: frmDownloadDocumento.aspx devolve o PDF com o header errado
+    `Content-Type: text/html`, contando com o `Content-Disposition: attachment`
+    para o navegador baixar em vez de renderizar. Navegador de desktop honra o
+    Content-Disposition e baixa certo; o navegador embutido do Telegram no
+    celular ignora, obedece o Content-Type e tenta RENDERIZAR os bytes do PDF
+    como HTML — o usuário vê "%PDF-1.7 ... obj ... xref" na tela.
+
+    O viewer é HTML de verdade, então funciona em qualquer navegador.
+    """
+    if "_sec_url" in filing.download_params or not filing.protocol:
+        return None
+    from urllib.parse import urlencode
+    return VIEWER_URL + "?" + urlencode({"NumeroProtocoloEntrega": filing.protocol})
 
 
 # ============================================================================
@@ -1021,7 +1042,15 @@ def _render_filing_telegram(filing: Filing, bullets: Optional[List[str]]) -> str
         lines.append("<i>Resumo indisponível.</i>")
     lines.append("")
     url = e(build_download_url(filing))
-    lines.append(f'<a href="{url}">Baixar documento original</a>')
+    viewer = build_viewer_url(filing)
+    if viewer:
+        # "Abrir" primeiro: e o unico que funciona no Telegram do celular.
+        lines.append(
+            f'📄 <a href="{e(viewer)}">Abrir documento</a>'
+            f'  ·  <a href="{url}">baixar PDF</a>'
+        )
+    else:
+        lines.append(f'📄 <a href="{url}">Abrir documento original</a>')
     # Limite do Telegram é 4096 caracteres por mensagem.
     return "\n".join(lines)[:4000]
 
