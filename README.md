@@ -22,6 +22,7 @@ no `email_config.json`; basta voltar a `true` e re-subir o secret para reativar.
 ## Sumário
 
 - [Como funciona](#como-funciona)
+- [Cobertura por fonte (e o que ela não cobre)](#cobertura-por-fonte-e-o-que-ela-não-cobre)
 - [Arquivos](#arquivos)
 - [Uso local](#uso-local)
 - [Configuração (`email_config.json`)](#configuração-email_configjson)
@@ -70,6 +71,26 @@ pelo próprio Actions, para sobreviver entre execuções.
 > Quem **executa** é sempre o GitHub Actions. O cron-job.org não roda código nenhum: ele só toca a
 > campainha (`workflow_dispatch`). Isso importa na hora de diagnosticar — ver
 > [seção 1](#1-o-problema-do-cron-do-github).
+
+---
+
+## Cobertura por fonte (e o que ela não cobre)
+
+| Fonte | Empresas | O que chega |
+|---|---|---|
+| **CVM / RAD** | 15 tickers B3 | Fato Relevante, Aviso aos Acionistas, Comunicado ao Mercado, ITR, Dados Econômico-Financeiros |
+| **SEC / EDGAR** | `AFYA`, `AMX` | 6-K, 20-F, 8-K (e as versões `/A`) — ver `SEC_FORMS_OF_INTEREST` |
+
+Não há integração com a **BMV** (bolsa mexicana). A América Móvil entra pela SEC, como emissora
+estrangeira com ADR na NYSE (CIK `0001129137`) — o mesmo caminho da Afya, sem código novo.
+
+> ⚠️ **Recompras da AMX não chegam por aqui.** A América Móvil divulga operações do fundo de
+> recompra à **BMV**, num relatório *"Información de recompra"* por dia de operação
+> (`bmv.com.mx/docs-pub/recompra/recompra_<id>_1.pdf`: clave de cotización, fecha de operación,
+> ações por série, remanente de recursos). Isso é exigência da regulação mexicana
+> (Circular Única de Emisoras) e **não vira 6-K na SEC** — a AMX protocola de 9 a 29 6-K por ano,
+> nunca em cadência diária. Quem depende de recompra da AMX precisa olhar a BMV; o monitor
+> cobre resultados e eventos materiais dela, não o fluxo diário de buyback.
 
 ---
 
