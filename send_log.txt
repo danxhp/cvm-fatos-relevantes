@@ -169,3 +169,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-08-28 22:40:20 | telegram | OK | ONCO3 | 1562796 | Comunicado ao Mercado | Notícia veiculada na mídia | chat 8369248929
 2026-09-01 09:30:26 | telegram | OK | QUAL3 | 1563347 | Fato Relevante | Sucessao da Presidencia Executiva | chat 1496332324
 2026-09-01 09:30:26 | telegram | OK | QUAL3 | 1563347 | Fato Relevante | Sucessao da Presidencia Executiva | chat 8369248929
+2026-09-01 22:05:22 | telegram | OK | ANIM3 | 1563718 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 1496332324
+2026-09-01 22:05:23 | telegram | OK | ANIM3 | 1563718 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
