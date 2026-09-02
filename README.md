@@ -31,6 +31,7 @@ no `email_config.json`; basta voltar a `true` e re-subir o secret para reativar.
   - [2. Disparo externo confiável (cron-job.org → workflow_dispatch)](#2-disparo-externo-confiável-cron-joborg--workflow_dispatch)
   - [3. Heartbeat / dead-man's-switch (healthchecks.io)](#3-heartbeat--dead-mans-switch-healthchecksio)
   - [4. Secrets necessários](#4-secrets-necessários)
+- [Recompra mensal da AMX (`amx_recompra.py`)](#recompra-mensal-da-amx-amx_recomprapy)
 - [Informe mensal de insiders e controlador](#informe-mensal-de-insiders-e-controlador)
 - [Por que o alerta traz DOIS links](#por-que-o-alerta-traz-dois-links)
 - [Falhas silenciosas: o que o heartbeat NÃO vê](#falhas-silenciosas-o-que-o-heartbeat-não-vê)
@@ -82,16 +83,16 @@ pelo próprio Actions, para sobreviver entre execuções.
 | **CVM / RAD** | 15 tickers B3 | Fato Relevante, Aviso aos Acionistas, Comunicado ao Mercado, ITR, Dados Econômico-Financeiros |
 | **SEC / EDGAR** | `AFYA`, `AMX` | 6-K, 20-F, 8-K (e as versões `/A`) — ver `SEC_FORMS_OF_INTEREST` |
 
-Não há integração com a **BMV** (bolsa mexicana). A América Móvil entra pela SEC, como emissora
-estrangeira com ADR na NYSE (CIK `0001129137`) — o mesmo caminho da Afya, sem código novo.
+| **BMV** (bolsa mexicana) | `AMX` | Recompra de ações, mensal — workflow separado, ver [`amx_recompra.py`](#recompra-mensal-da-amx-amx_recomprapy) |
 
-> ⚠️ **Recompras da AMX não chegam por aqui.** A América Móvil divulga operações do fundo de
-> recompra à **BMV**, num relatório *"Información de recompra"* por dia de operação
-> (`bmv.com.mx/docs-pub/recompra/recompra_<id>_1.pdf`: clave de cotización, fecha de operación,
-> ações por série, remanente de recursos). Isso é exigência da regulação mexicana
-> (Circular Única de Emisoras) e **não vira 6-K na SEC** — a AMX protocola de 9 a 29 6-K por ano,
-> nunca em cadência diária. Quem depende de recompra da AMX precisa olhar a BMV; o monitor
-> cobre resultados e eventos materiais dela, não o fluxo diário de buyback.
+A América Móvil entra pela SEC como emissora estrangeira com ADR na NYSE (CIK `0001129137`) — o
+mesmo caminho da Afya, sem código novo. Isso cobre **resultados e eventos materiais** (6-K, 20-F).
+
+> ⚠️ **Recompra da AMX não sai pela SEC.** A divulgação de recompra é exigência mexicana
+> (Circular Única de Emisoras) e vai para a **BMV**, num relatório por dia de operação. Não vira
+> 6-K — a AMX protocola de 9 a 29 6-K por ano, nunca em cadência diária — e o 20-F só traz a
+> tabela mensal uma vez por ano, com até 16 meses de defasagem. Por isso a recompra tem
+> **fonte e workflow próprios**.
 
 ---
 
@@ -109,6 +110,10 @@ estrangeira com ADR na NYSE (CIK `0001129137`) — o mesmo caminho da Afya, sem 
 | `monitor_log.txt` | Log de execução local (texto livre, verboso). **Efêmero na nuvem** — não versionado. |
 | `earnings_watch.py` | **Watcher pontual de resultados** — standalone, roda local, reaproveita o fetch/parse do monitor. Vigia tickers (CVM + SEC) de minuto a minuto e avisa no **Telegram + pop-up + voz** na tela. Ver [seção dedicada](#watcher-pontual-de-resultados-earnings_watchpy). |
 | `earnings_watch_seen.json` / `earnings_watch_log.txt` | Estado (protocolos já entregues) e log do watcher. **Não versionados** (`.gitignore`). |
+| `amx_recompra.py` | **Recompra mensal da AMX** via BMV. Workflow próprio (mensal), fonte própria. Ver [seção dedicada](#recompra-mensal-da-amx-amx_recomprapy). |
+| `.github/workflows/amx_recompra.yml` | Workflow mensal (`cron: 10 13 2 * *`) do relatório de recompra. |
+| `amx_recompra_state.json` | Último fechamento mensal da AMX (id, data, remanente, tesouraria). Versionado — é a base de comparação do mês seguinte, sem ele o cálculo exige varredura profunda. |
+| `amx_recompra_log.txt` | Log da varredura de IDs na BMV. **Não versionado.** |
 | `requirements.txt` | Dependências Python. |
 
 ---
@@ -411,6 +416,86 @@ gh secret set EMAIL_CONFIG_JSON < email_config.json
 | Secret | Conteúdo |
 |---|---|
 | `EMAIL_CONFIG_JSON` | O `email_config.json` inteiro (SMTP + chave Anthropic + destinatários + `healthcheck_url`). |
+
+---
+
+## Recompra mensal da AMX (`amx_recompra.py`)
+
+Workflow **separado** ([`.github/workflows/amx_recompra.yml`](.github/workflows/amx_recompra.yml)),
+`cron: 10 13 2 * *` — dia 2 de cada mês. Reporta no Telegram a recompra da América Móvil no
+**último mês fechado**, em MXN e USD.
+
+### O problema: a fonte não tem índice
+
+A AMX divulga recompra à **BMV**, num relatório *"Información de recompra"* por dia de operação,
+publicado **no mesmo dia**. Não vira 6-K, e o 20-F só traz a tabela mensal uma vez por ano com até
+16 meses de defasagem — a BMV é a única fonte tempestiva. Mas não há listagem pública dos
+documentos, e os IDs são opacos.
+
+### A descoberta: o contador é global e sequencial
+
+A BMV numera **todos** os documentos públicos num único contador, ~254/dia, independente do tipo.
+Validado extrapolando de um documento de 19/12/2024 (`id 1428024`) até 01/09/2026: previsto
+`1585758`, real `1586058` — **erro de 300 IDs em 621 dias**. Então dá para sondar:
+
+```
+HEAD /docs-pub/recompra/recompra_<id>_1.pdf   ->  200 = é relatório de recompra
+```
+
+A âncora do topo do espaço de IDs vem da home da BMV, que lista documentos recém-publicados.
+
+### Por que mensal, e não varredura diária
+
+O **remanente do fundo é saldo corrente**, então a recompra do mês sai de **dois** relatórios: o
+último do mês N e o último do mês N-1. Com o estado persistido em `amx_recompra_state.json`, cada
+execução mensal só varre para trás até achar o fechamento do mês — algumas centenas de IDs, em vez
+dos ~7.600 de um mês inteiro. O `--bootstrap` (primeira execução) varre mais fundo porque precisa
+achar os dois.
+
+### A armadilha: recomposição do fundo
+
+O delta do remanente **só vale se o fundo não tiver sido recomposto**. A assembleia anual autoriza
+recursos novos e o remanente **sobe**. Medido na tabela do 20-F FY2025:
+
+| | MXN |
+|---|---|
+| Remanente fim ABR/2025 | 10.611.365.225 |
+| Remanente fim MAI/2025 | 18.145.547.145 |
+| **Delta ingênuo** | **−7.534.181.919** ← negativo |
+| Recompra real de maio | 2.479.745.073 (146.904.329 ações @ 16,88) |
+
+A assembleia de 14/05/2025 injetou ~MXN 10,0 bi. O método ingênuo erraria **404%**, uma vez por
+ano. Por isso, **se o remanente sobe, o script não reporta número** — avisa que houve recomposição
+e que o mês precisa de apuração à parte.
+
+### Conferências embutidas
+
+- **Por relatório:** a soma dos importes das operações do dia tem que bater com o consumo do
+  remanente. Bateu exato no relatório de 01/09/2026 (MXN 49.065.590 nos dois cálculos). Se
+  divergir, o alerta sai marcado.
+- **Entre relatórios:** o campo `remanente al último reporte` do fechamento seguinte tem que ser
+  igual ao `remanente` do anterior. Confirmado: 31/08 e 01/09 fecharam em 15.126.294.893.
+
+### Detalhes de extração
+
+O remanente e a tabela de operações saem limpos. O bloco `SALDOS`, não — o `pypdf` embaralha a
+ordem das colunas de forma **inconsistente entre as duas linhas do mesmo PDF**:
+
+```
+Al último reporte    59,899,000,000 0271,000,000
+Al presente reporte  273,500,000 59,896,500,000 0
+```
+
+Por isso a tesouraria é identificada por **magnitude** (tesouraria ~271 mi vs circulação ~59,9 bi),
+não por posição.
+
+**Câmbio:** média simples das cotações diárias MXN→USD do período, via
+[frankfurter.app](https://api.frankfurter.app) (sem chave).
+
+> ⚠️ **Fragilidade assumida.** A varredura por ID depende de a BMV manter a numeração sequencial e
+> o padrão de URL. Não é API contratada, é comportamento observado. Se uma varredura inteira não
+> achar **nenhum** relatório de recompra de nenhuma emissora, isso é anomalia — foram encontrados
+> 19 a 32 por chunk de 400 IDs nos testes.
 
 ---
 

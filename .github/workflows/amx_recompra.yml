@@ -1,0 +1,71 @@
+name: AMX Recompra Mensal
+
+on:
+  schedule:
+    # Dia 2 de cada mês, 13:10 UTC (10:10 BRT). Dia 2, não dia 1: o alvo é o
+    # último mês FECHADO, e rodar com um dia de folga evita depender de a BMV
+    # ter publicado o fechamento na virada.
+    - cron: '10 13 2 * *'
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: 'Varredura profunda para achar 2 fechamentos (1a execução)'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Calcular e logar, sem enviar no Telegram'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: amx-recompra
+  cancel-in-progress: false
+
+jobs:
+  recompra:
+    runs-on: ubuntu-latest
+    # A varredura por ID é a parte lenta: ~27 IDs/s, e o bootstrap pode
+    # percorrer 20.000 IDs. 40 min cobre o pior caso com folga.
+    timeout-minutes: 40
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write email_config.json from secret
+        env:
+          EMAIL_CONFIG: ${{ secrets.EMAIL_CONFIG_JSON }}
+        run: printf '%s' "$EMAIL_CONFIG" > email_config.json
+
+      - name: Run AMX buyback report
+        run: |
+          ARGS=""
+          if [ "${{ inputs.bootstrap }}" = "true" ]; then ARGS="$ARGS --bootstrap"; fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          python amx_recompra.py $ARGS
+
+      - name: Commit updated state
+        run: |
+          rm -f email_config.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # O estado é criado na 1a execução; `git add` de caminho inexistente
+          # aborta o step, então só adiciona o que existir.
+          [ -f amx_recompra_state.json ] && git add amx_recompra_state.json
+          if git diff --staged --quiet; then
+            echo "Nada a commitar."
+          else
+            git commit -m "chore: update AMX recompra state [skip ci]"
+            git push
+          fi

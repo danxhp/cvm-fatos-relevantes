@@ -9,3 +9,5 @@ cvm_fatos_relevantes_simples.py
 __pycache__/
 *.pyc
 _debug.py
+amx_recompra_log.txt
+amx_bootstrap_out.txt
