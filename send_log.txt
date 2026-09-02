@@ -171,3 +171,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-01 09:30:26 | telegram | OK | QUAL3 | 1563347 | Fato Relevante | Sucessao da Presidencia Executiva | chat 8369248929
 2026-09-01 22:05:22 | telegram | OK | ANIM3 | 1563718 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 1496332324
 2026-09-01 22:05:23 | telegram | OK | ANIM3 | 1563718 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
+2026-09-02 11:35:28 | telegram | OK | RDOR3 | 1563844 | Comunicado ao Mercado | Acordo Atlântica D’Or Hospital Biocor | chat 1496332324
+2026-09-02 11:35:29 | telegram | OK | RDOR3 | 1563844 | Comunicado ao Mercado | Acordo Atlântica D’Or Hospital Biocor | chat 8369248929
+2026-09-02 11:35:30 | telegram | OK | ODPV3 | 1563842 | Comunicado ao Mercado | Acordo de Investimento entre Atlântica Hospitais e Rede DOr para construção do Hospital Biocor, Nova Lima - MG | chat 1496332324
+2026-09-02 11:35:30 | telegram | OK | ODPV3 | 1563842 | Comunicado ao Mercado | Acordo de Investimento entre Atlântica Hospitais e Rede DOr para construção do Hospital Biocor, Nova Lima - MG | chat 8369248929
