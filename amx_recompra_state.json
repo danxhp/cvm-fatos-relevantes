@@ -1,0 +1,37 @@
+{
+  "reports": {
+    "07/2026": {
+      "acoes_dia": 3000000.0,
+      "consistente": true,
+      "fecha": "31/07/2026",
+      "id": 1579180,
+      "importe_dia": 66234685.0,
+      "operacoes_dia": 15,
+      "remanente": 17040109597.0,
+      "remanente_anterior": 17106344282.0,
+      "tesoreria": 177000000.0
+    },
+    "08/2026": {
+      "acoes_dia": 2500000.0,
+      "consistente": true,
+      "fecha": "31/08/2026",
+      "id": 1585645,
+      "importe_dia": 49153798.0,
+      "operacoes_dia": 15,
+      "remanente": 15126294893.0,
+      "remanente_anterior": 15175448691.0,
+      "tesoreria": 271000000.0
+    }
+  },
+  "ultimo_fechamento": {
+    "acoes_dia": 2500000.0,
+    "consistente": true,
+    "fecha": "31/08/2026",
+    "id": 1585645,
+    "importe_dia": 49153798.0,
+    "operacoes_dia": 15,
+    "remanente": 15126294893.0,
+    "remanente_anterior": 15175448691.0,
+    "tesoreria": 271000000.0
+  }
+}
