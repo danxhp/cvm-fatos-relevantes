@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMX Share Buybacks — LTM</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f4f4f2;
+    --surface-1: #fcfcfb;
+    --border:    #e2e1dd;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #86857f;
+    --series-1:  #2a78d6;
+    --grid:      #e8e7e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-0: #121211;
+      --surface-1: #1a1a19;
+      --border:    #333331;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #8d8c84;
+      --series-1:  #3987e5;
+      --grid:      #2b2b29;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --border:    #333331;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #8d8c84;
+    --series-1:  #3987e5;
+    --grid:      #2b2b29;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface-0); color: var(--text-primary);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 40px 24px 64px; }
+
+  header { margin-bottom: 28px; }
+  h1 { font-size: 24px; line-height: 1.25; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .sub { color: var(--text-secondary); font-size: 14px; margin: 0; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 24px 0 28px; }
+  .kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .kpi .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px; }
+  .kpi .v { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .kpi .u { font-size: 12px; color: var(--text-secondary); font-weight: 400; margin-left: 3px; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 20px 20px 12px; margin-bottom: 24px; }
+  .card h2 { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+  .card .cap { font-size: 12px; color: var(--text-secondary); margin: 0 0 14px; }
+
+  .chartbox { position: relative; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .grid { stroke: var(--grid); stroke-width: 1; }
+  .axis { stroke: var(--border); stroke-width: 1; }
+  .ytick { fill: var(--text-muted); font-size: 10px; text-anchor: end; font-variant-numeric: tabular-nums; }
+  .xtick { fill: var(--text-secondary); font-size: 10px; text-anchor: middle; }
+  .xtick.yr { fill: var(--text-muted); font-size: 9px; }
+  .vlab { fill: var(--text-primary); font-size: 10px; font-weight: 600; text-anchor: middle; font-variant-numeric: tabular-nums; }
+  .hit { fill: transparent; }
+  .bar { cursor: default; outline: none; }
+  .bar .mark { transition: opacity .12s ease; }
+  .bar:hover .mark, .bar:focus-visible .mark { opacity: .78; }
+  .bar:focus-visible .mark { stroke: var(--text-primary); stroke-width: 1.5; }
+
+  .tip {
+    position: absolute; pointer-events: none; opacity: 0; transform: translate(-50%, -100%);
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; white-space: nowrap; z-index: 5;
+    box-shadow: 0 4px 14px rgba(0,0,0,.14); transition: opacity .1s ease;
+  }
+  .tip.on { opacity: 1; }
+  .tip b { display: block; margin-bottom: 3px; font-size: 12px; }
+  .tip .r { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  caption { text-align: left; font-size: 12px; color: var(--text-secondary); padding-bottom: 10px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; font-weight: 400; }
+  thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; border-bottom-width: 1px; }
+  tbody th { font-weight: 500; white-space: nowrap; }
+  .num { text-align: right; }
+  .strong { font-weight: 600; }
+  .muted { color: var(--text-muted); }
+  .na { color: var(--text-muted); }
+  tfoot td, tfoot th { font-weight: 600; border-top: 2px solid var(--border); border-bottom: none; padding-top: 10px; }
+  .tag { font-size: 10px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; margin-left: 5px; font-weight: 400; }
+  .tblwrap { overflow-x: auto; }
+
+  .notes { font-size: 12px; color: var(--text-secondary); }
+  .notes h2 { font-size: 13px; color: var(--text-primary); margin: 0 0 8px; }
+  .notes ol { margin: 0; padding-left: 18px; }
+  .notes li { margin-bottom: 7px; }
+  .notes code { font-size: 11px; background: var(--surface-0); padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>América Móvil — Share Buybacks</h1>
+    <p class="sub">Last twelve months · September 2025 – August 2026 · amounts in USD millions</p>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><div class="k">LTM buybacks</div><div class="v">552<span class="u">USD mn</span></div></div>
+    <div class="kpi"><div class="k">LTM, local currency</div><div class="v">9.66<span class="u">MXN bn</span></div></div>
+    <div class="kpi"><div class="k">Shares repurchased</div><div class="v">418<span class="u">mn</span></div></div>
+    <div class="kpi"><div class="k">Last 3M vs prior 3M</div><div class="v">231<span class="u">vs 183</span></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Monthly buybacks</h2>
+    <p class="cap">USD mn, converted at each month's average daily MXN/USD rate. Hatched bar is derived, not directly observed.</p>
+    <div class="chartbox">
+      <svg viewBox="0 0 840 300" role="img" aria-label="Monthly share buybacks in USD millions, September 2025 to August 2026">
+<defs>
+  <pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+    <rect width="6" height="6" fill="var(--series-1)" opacity="0.30"/>
+    <line x1="0" y1="0" x2="0" y2="6" stroke="var(--series-1)" stroke-width="3"/>
+  </pattern>
+</defs>
+<line class="axis" x1="52" y1="258" x2="828" y2="258"/>
+<line class="grid" x1="52" y1="258.0" x2="828" y2="258.0"/><text class="ytick" x="44" y="261.5">0</text><line class="grid" x1="52" y1="211.6" x2="828" y2="211.6"/><text class="ytick" x="44" y="215.1">25</text><line class="grid" x1="52" y1="165.2" x2="828" y2="165.2"/><text class="ytick" x="44" y="168.7">50</text><line class="grid" x1="52" y1="118.8" x2="828" y2="118.8"/><text class="ytick" x="44" y="122.3">75</text><line class="grid" x1="52" y1="72.4" x2="828" y2="72.4"/><text class="ytick" x="44" y="75.9">100</text><line class="grid" x1="52" y1="26.0" x2="828" y2="26.0"/><text class="ytick" x="44" y="29.5">125</text>
+<g class="bar" tabindex="0" data-m="Sep 2025" data-usd="34.5" data-mxn="638" data-sh="34.2 mn" data-src="20-F Item 16E"><rect class="hit" x="52.0" y="26" width="64.7" height="232"/><rect class="mark" x="67.5" y="194.0" width="33.6" height="64.0" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Oct 2025" data-usd="15.3" data-mxn="281" data-sh="14.2 mn" data-src="20-F Item 16E"><rect class="hit" x="116.7" y="26" width="64.7" height="232"/><rect class="mark" x="132.2" y="229.7" width="33.6" height="28.3" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Nov 2025" data-usd="4.3" data-mxn="79" data-sh="3.8 mn" data-src="20-F Item 16E"><rect class="hit" x="181.3" y="26" width="64.7" height="232"/><rect class="mark" x="196.9" y="250.0" width="33.6" height="8.0" rx="4" fill="var(--series-1)"/></g><text class="vlab" x="213.7" y="243.0">4</text><g class="bar" tabindex="0" data-m="Dec 2025" data-usd="42.5" data-mxn="769" data-sh="40.2 mn" data-src="20-F Item 16E"><rect class="hit" x="246.0" y="26" width="64.7" height="232"/><rect class="mark" x="261.5" y="179.1" width="33.6" height="78.9" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Jan 2026" data-usd="25.3" data-mxn="447" data-sh="24.6 mn" data-src="BMV daily reports"><rect class="hit" x="310.7" y="26" width="64.7" height="232"/><rect class="mark" x="326.2" y="211.1" width="33.6" height="46.9" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Feb 2026" data-usd="16.4" data-mxn="283" data-sh="13.7 mn" data-src="BMV daily reports"><rect class="hit" x="375.3" y="26" width="64.7" height="232"/><rect class="mark" x="390.9" y="227.5" width="33.6" height="30.5" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Mar 2026" data-usd="36.6" data-mxn="650" data-sh="30.2 mn" data-src="BMV daily reports"><rect class="hit" x="440.0" y="26" width="64.7" height="232"/><rect class="mark" x="455.5" y="190.1" width="33.6" height="67.9" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Apr 2026" data-usd="53.4" data-mxn="930" data-sh="n/a" data-src="Derived (see note 2)"><rect class="hit" x="504.7" y="26" width="64.7" height="232"/><rect class="mark" x="520.2" y="158.9" width="33.6" height="99.1" rx="4" fill="url(#hatch)"/></g><text class="vlab" x="537.0" y="151.9">53</text><g class="bar" tabindex="0" data-m="May 2026" data-usd="92.9" data-mxn="1,608" data-sh="70.8 mn" data-src="BMV daily reports"><rect class="hit" x="569.3" y="26" width="64.7" height="232"/><rect class="mark" x="584.9" y="85.6" width="33.6" height="172.4" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Jun 2026" data-usd="39.3" data-mxn="682" data-sh="30.1 mn" data-src="BMV daily reports"><rect class="hit" x="634.0" y="26" width="64.7" height="232"/><rect class="mark" x="649.5" y="185.1" width="33.6" height="72.9" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Jul 2026" data-usd="79.1" data-mxn="1,382" data-sh="61.5 mn" data-src="BMV daily reports"><rect class="hit" x="698.7" y="26" width="64.7" height="232"/><rect class="mark" x="714.2" y="111.2" width="33.6" height="146.8" rx="4" fill="var(--series-1)"/></g><g class="bar" tabindex="0" data-m="Aug 2026" data-usd="112.2" data-mxn="1,914" data-sh="94.0 mn" data-src="BMV daily reports"><rect class="hit" x="763.3" y="26" width="64.7" height="232"/><rect class="mark" x="778.9" y="49.8" width="33.6" height="208.2" rx="4" fill="var(--series-1)"/></g><text class="vlab" x="795.7" y="42.8">112</text>
+<text class="xtick" x="84.3" y="274">Sep</text><text class="xtick yr" x="84.3" y="287">2025</text><text class="xtick" x="149.0" y="274">Oct</text><text class="xtick" x="213.7" y="274">Nov</text><text class="xtick" x="278.3" y="274">Dec</text><text class="xtick" x="343.0" y="274">Jan</text><text class="xtick yr" x="343.0" y="287">2026</text><text class="xtick" x="407.7" y="274">Feb</text><text class="xtick" x="472.3" y="274">Mar</text><text class="xtick" x="537.0" y="274">Apr</text><text class="xtick" x="601.7" y="274">May</text><text class="xtick" x="666.3" y="274">Jun</text><text class="xtick" x="731.0" y="274">Jul</text><text class="xtick" x="795.7" y="274">Aug</text>
+</svg>
+      <div class="tip" id="tip"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tblwrap">
+    <table>
+      <caption>Monthly detail. Amounts are the fund's actual cash consumption; share counts from treasury balances.</caption>
+      <thead>
+        <tr>
+          <th scope="col">Month</th>
+          <th scope="col" class="num">Shares (mn)</th>
+          <th scope="col" class="num">Avg price (MXN)</th>
+          <th scope="col" class="num">Amount (MXN mn)</th>
+          <th scope="col" class="num">Amount (USD mn)</th>
+          <th scope="col" class="num">MXN/USD</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Sep 2025</th><td class="num">34.25</td><td class="num">18.63</td><td class="num">638</td><td class="num strong">34.5</td><td class="num muted">18.50</td></tr><tr><th scope="row">Oct 2025</th><td class="num">14.25</td><td class="num">19.74</td><td class="num">281</td><td class="num strong">15.3</td><td class="num muted">18.43</td></tr><tr><th scope="row">Nov 2025</th><td class="num">3.75</td><td class="num">21.10</td><td class="num">79</td><td class="num strong">4.3</td><td class="num muted">18.42</td></tr><tr><th scope="row">Dec 2025</th><td class="num">40.25</td><td class="num">19.11</td><td class="num">769</td><td class="num strong">42.5</td><td class="num muted">18.09</td></tr><tr><th scope="row">Jan 2026</th><td class="num">24.60</td><td class="num">18.16</td><td class="num">447</td><td class="num strong">25.3</td><td class="num muted">17.66</td></tr><tr><th scope="row">Feb 2026</th><td class="num">13.66</td><td class="num">20.72</td><td class="num">283</td><td class="num strong">16.4</td><td class="num muted">17.24</td></tr><tr><th scope="row">Mar 2026</th><td class="num">30.24</td><td class="num">21.49</td><td class="num">650</td><td class="num strong">36.6</td><td class="num muted">17.76</td></tr><tr><th scope="row">Apr 2026 <span class="tag">derived</span></th><td class="num"><span class="na">n/a</span></td><td class="num"><span class="na">n/a</span></td><td class="num">930</td><td class="num strong">53.4</td><td class="num muted">17.43</td></tr><tr><th scope="row">May 2026</th><td class="num">70.85</td><td class="num">22.69</td><td class="num">1,608</td><td class="num strong">92.9</td><td class="num muted">17.31</td></tr><tr><th scope="row">Jun 2026</th><td class="num">30.15</td><td class="num">22.63</td><td class="num">682</td><td class="num strong">39.3</td><td class="num muted">17.37</td></tr><tr><th scope="row">Jul 2026</th><td class="num">61.50</td><td class="num">22.47</td><td class="num">1,382</td><td class="num strong">79.1</td><td class="num muted">17.47</td></tr><tr><th scope="row">Aug 2026</th><td class="num">94.00</td><td class="num">20.36</td><td class="num">1,914</td><td class="num strong">112.2</td><td class="num muted">17.06</td></tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row">LTM total</th>
+          <td class="num">417.50</td>
+          <td class="num"><span class="na">—</span></td>
+          <td class="num">9,663</td>
+          <td class="num">551.7</td>
+          <td class="num"><span class="na">—</span></td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+  </div>
+
+  <div class="card notes">
+    <h2>Sources and method</h2>
+    <ol>
+      <li><b>Sep–Dec 2025</b> come from the FY2025 <b>Form 20-F, Item 16E</b> (monthly repurchase table).
+          <b>Jan–Aug 2026</b> are computed from América Móvil's daily <i>"Información de recompra"</i> filings
+          with the <b>Bolsa Mexicana de Valores</b>. Each month's amount is the decline in the buyback fund's
+          remaining balance between consecutive month-end filings — i.e. cash actually deployed.</li>
+      <li><b>April 2026 is derived, not observed.</b> The 23 April 2026 shareholders' meeting authorised up to
+          Ps.10bn of new funds, so the fund balance <i>rose</i> that month and the month-over-month method breaks.
+          The figure shown is the residual of the 1H26 buyback total disclosed in the 2Q26 6-K
+          (Ps.4.6bn) less the five clean months (Ps.3.67bn). The implied fund injection of Ps.10.03bn
+          matches the authorised Ps.10bn, which corroborates the residual.</li>
+      <li><b>April 2026 share count is not available.</b> The same meeting cancelled treasury shares
+          (balance fell from 1,050.0mn to 14.5mn), so the treasury delta cannot isolate purchases that month.
+          The LTM share total therefore excludes April.</li>
+      <li><b>FX:</b> each month is converted at the simple average of that month's daily MXN/USD rates
+          (ECB reference series via frankfurter.app), per the period-average convention.</li>
+      <li><b>Cross-checks passed.</b> The BMV filing for 31 Dec 2025 reports a remaining fund balance of
+          MXN 12,990,090,502 against MXN 12,990,090,518 in the audited 20-F — a 16-peso difference on
+          13bn. Within each daily filing, the sum of individual trade amounts reconciles exactly to the
+          change in fund balance.</li>
+    </ol>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var tip = document.getElementById('tip');
+  var box = tip.parentElement;
+  function show(g) {
+    tip.innerHTML = '<b>' + g.dataset.m + '</b>'
+      + '<div class="r">USD ' + g.dataset.usd + ' mn</div>'
+      + '<div class="r">MXN ' + g.dataset.mxn + ' mn</div>'
+      + '<div class="r">Shares: ' + g.dataset.sh + '</div>'
+      + '<div class="r">' + g.dataset.src + '</div>';
+    var m = g.querySelector('.mark').getBoundingClientRect();
+    var b = box.getBoundingClientRect();
+    tip.style.left = (m.left - b.left + m.width / 2) + 'px';
+    tip.style.top = (m.top - b.top - 8) + 'px';
+    tip.classList.add('on');
+  }
+  function hide() { tip.classList.remove('on'); }
+  Array.prototype.forEach.call(document.querySelectorAll('.bar'), function (g) {
+    g.addEventListener('mouseenter', function () { show(g); });
+    g.addEventListener('focus', function () { show(g); });
+    g.addEventListener('mouseleave', hide);
+    g.addEventListener('blur', hide);
+  });
+  box.addEventListener('mouseleave', hide);
+})();
+</script>
+</body>
+</html>
