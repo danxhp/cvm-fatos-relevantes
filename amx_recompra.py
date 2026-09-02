@@ -294,6 +294,13 @@ def fx_media_periodo(ini: date, fim: date) -> Optional[float]:
 # RELATÓRIO
 # ============================================================================
 
+def _mxn(v: float) -> str:
+    """MXN compacto: bilhoes acima de 1bn, senao milhoes. Uma casa decimal."""
+    if abs(v) >= 1_000_000_000:
+        return f"MXN {v/1_000_000_000:,.1f}bn"
+    return f"MXN {v/1_000_000:,.1f}mn"
+
+
 def montar_mensagem(mes: str, atual: Dict, anterior: Dict, fx: Optional[float]) -> str:
     e = __import__("html").escape
     delta_rem = anterior["remanente"] - atual["remanente"]
@@ -304,8 +311,8 @@ def montar_mensagem(mes: str, atual: Dict, anterior: Dict, fx: Optional[float]) 
         # Assembleia recompôs o fundo: o delta perde o sentido econômico.
         linhas += [
             "⚠️ <b>Recomposição do fundo detectada.</b>",
-            f"O remanente <b>subiu</b> de MXN {anterior['remanente']:,.0f} para "
-            f"MXN {atual['remanente']:,.0f} — a assembleia autorizou recursos novos "
+            f"A verba disponível <b>subiu</b> de {_mxn(anterior['remanente'])} para "
+            f"{_mxn(atual['remanente'])} — a assembleia autorizou recursos novos "
             f"no período.",
             "",
             "O valor recomprado no mês <b>não pode ser deduzido do saldo do fundo</b> "
@@ -317,15 +324,18 @@ def montar_mensagem(mes: str, atual: Dict, anterior: Dict, fx: Optional[float]) 
             d = atual["tesoreria"] - anterior["tesoreria"]
             if d > 0:
                 acoes = d
-        linhas.append(f"💰 Recomprado: <b>MXN {delta_rem:,.0f}</b>")
+        linhas.append(f"💰 Recomprado: <b>{_mxn(delta_rem)}</b>")
         if fx:
-            linhas.append(f"       ≈ <b>USD {delta_rem * fx / 1_000_000:,.1f} mn</b> "
-                          f"(média do período: 1 USD = {1/fx:,.4f} MXN)")
+            linhas.append(f"       ≈ <b>USD {delta_rem * fx / 1_000_000:,.1f}mn</b> "
+                          f"(câmbio médio: 1 USD = {1/fx:,.2f} MXN)")
         if acoes:
-            linhas.append(f"📊 Ações: <b>{acoes:,.0f}</b>  ·  preço médio "
-                          f"MXN {delta_rem/acoes:,.4f}")
+            linhas.append(f"📊 Ações: <b>{acoes/1_000_000:,.1f}mn</b>  ·  preço médio "
+                          f"MXN {delta_rem/acoes:,.2f}")
         linhas.append("")
-        linhas.append(f"🏦 Fundo remanescente: MXN {atual['remanente']:,.0f}")
+        # "Remanente de recursos" no relatorio da BMV: quanto AINDA resta da verba
+        # que a assembleia autorizou para recompra. E o limite de fogo restante,
+        # nao caixa da companhia.
+        linhas.append(f"🏦 Verba de recompra ainda disponível: <b>{_mxn(atual['remanente'])}</b>")
 
     linhas += [
         "",

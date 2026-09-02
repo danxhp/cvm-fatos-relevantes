@@ -26,6 +26,15 @@ FX = {  # media simples das cotacoes diarias do mes, MXN->USD
     "2026-05": 0.057773, "2026-06": 0.057559, "2026-07": 0.057234, "2026-08": 0.058607,
 }
 
+# Base do market cap: ultimo dado observado na BMV (relatorio de 01/09/2026) --
+# acoes em circulacao x preco medio efetivamente pago naquele pregao. O % de cada
+# mes usa ESTA base unica, para a coluna somar exatamente o % do LTM.
+SHARES_OUT = 59_896_500_000       # acciones en circulacion, 01/09/2026
+PRICE_REF  = 19.6262              # MXN, preco medio das 21 operacoes de 01/09/2026
+FX_REF     = 0.058607             # MXN->USD, media de ago/2026
+MCAP_MXN   = SHARES_OUT * PRICE_REF
+MCAP_USD   = MCAP_MXN * FX_REF
+
 FONTE_LABEL = {
     "20F": "20-F Item 16E",
     "BMV": "BMV daily reports",
@@ -41,6 +50,7 @@ for key, label, mxn, sh, src in DADOS:
         "mxn_mn": mxn / 1e6, "usd_mn": usd, "shares": sh,
         "px": (mxn / sh) if sh else None,
         "fx": 1 / fx, "src": src,
+        "pct": 100.0 * mxn / MCAP_MXN,
     })
 
 tot_usd = sum(r["usd_mn"] for r in rows)
@@ -127,6 +137,7 @@ for r in rows:
         f'<td class="num">{r["mxn_mn"]:,.0f}</td>'
         f'<td class="num strong">{r["usd_mn"]:,.1f}</td>'
         f'<td class="num muted">{r["fx"]:,.2f}</td>'
+        f'<td class="num">{r["pct"]:,.3f}%</td>'
         "</tr>"
     )
 
@@ -251,6 +262,7 @@ html = f'''<!doctype html>
     <div class="kpi"><div class="k">LTM buybacks</div><div class="v">{tot_usd:,.0f}<span class="u">USD mn</span></div></div>
     <div class="kpi"><div class="k">LTM, local currency</div><div class="v">{tot_mxn/1000:,.2f}<span class="u">MXN bn</span></div></div>
     <div class="kpi"><div class="k">Shares repurchased</div><div class="v">{tot_sh/1e6:,.0f}<span class="u">mn</span></div></div>
+    <div class="kpi"><div class="k">% of market cap</div><div class="v">{sum(r["pct"] for r in rows):,.2f}<span class="u">%</span></div></div>
     <div class="kpi"><div class="k">Last 3M vs prior 3M</div><div class="v">{last3:,.0f}<span class="u">vs {prev3:,.0f}</span></div></div>
   </div>
 
@@ -275,6 +287,7 @@ html = f'''<!doctype html>
           <th scope="col" class="num">Amount (MXN mn)</th>
           <th scope="col" class="num">Amount (USD mn)</th>
           <th scope="col" class="num">MXN/USD</th>
+          <th scope="col" class="num">% of mkt cap</th>
         </tr>
       </thead>
       <tbody>
@@ -288,6 +301,7 @@ html = f'''<!doctype html>
           <td class="num">{tot_mxn:,.0f}</td>
           <td class="num">{tot_usd:,.1f}</td>
           <td class="num"><span class="na">—</span></td>
+          <td class="num">{sum(r["pct"] for r in rows):,.3f}%</td>
         </tr>
       </tfoot>
     </table>
@@ -309,6 +323,11 @@ html = f'''<!doctype html>
       <li><b>April 2026 share count is not available.</b> The same meeting cancelled treasury shares
           (balance fell from 1,050.0mn to 14.5mn), so the treasury delta cannot isolate purchases that month.
           The LTM share total therefore excludes April.</li>
+      <li><b>% of market cap</b> is each month's peso amount over a single reference market
+          capitalisation of <b>MXN {MCAP_MXN/1e9:,.1f}bn</b> (USD {MCAP_USD/1e9:,.1f}bn) —
+          {SHARES_OUT/1e9:,.2f}bn shares outstanding times MXN {PRICE_REF:,.2f}, both taken from the
+          BMV filing of 1 September 2026. One fixed base is used so the column adds up to the LTM
+          figure; it is not a point-in-time market cap for each month.</li>
       <li><b>FX:</b> each month is converted at the simple average of that month's daily MXN/USD rates
           (ECB reference series via frankfurter.app), per the period-average convention.</li>
       <li><b>Cross-checks passed.</b> The BMV filing for 31 Dec 2025 reports a remaining fund balance of
