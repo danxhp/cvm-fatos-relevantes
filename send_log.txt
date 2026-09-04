@@ -181,3 +181,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-04 18:45:28 | telegram | OK | BLAU3 | 1565102 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-09-04 18:45:29 | telegram | OK | BLAU3 | 1565100 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-09-04 18:45:30 | telegram | OK | BLAU3 | 1565100 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-04 20:20:26 | telegram | OK | ODPV3 | 1565174 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-09-04 20:20:27 | telegram | OK | ODPV3 | 1565174 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-09-04 20:20:27 | telegram | OK | ODPV3 | 1565173 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-09-04 20:20:28 | telegram | OK | ODPV3 | 1565173 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
