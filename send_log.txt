@@ -189,3 +189,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-04 20:35:30 | telegram | OK | QUAL3 | 1565183 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-09-04 20:35:30 | telegram | OK | QUAL3 | 1565180 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-09-04 20:35:31 | telegram | OK | QUAL3 | 1565180 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-04 21:25:26 | telegram | OK | COGN3 | 1565306 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-09-04 21:25:27 | telegram | OK | COGN3 | 1565306 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-04 21:25:27 | telegram | OK | COGN3 | 1565303 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-09-04 21:25:28 | telegram | OK | COGN3 | 1565303 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
