@@ -177,3 +177,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-02 11:35:30 | telegram | OK | ODPV3 | 1563842 | Comunicado ao Mercado | Acordo de Investimento entre Atlântica Hospitais e Rede DOr para construção do Hospital Biocor, Nova Lima - MG | chat 8369248929
 2026-09-03 17:00:32 | telegram | OK | MATD3 | 1564521 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-09-03 17:00:33 | telegram | OK | MATD3 | 1564521 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-04 18:45:28 | telegram | OK | BLAU3 | 1565102 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-09-04 18:45:28 | telegram | OK | BLAU3 | 1565102 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-09-04 18:45:29 | telegram | OK | BLAU3 | 1565100 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-09-04 18:45:30 | telegram | OK | BLAU3 | 1565100 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
