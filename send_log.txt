@@ -199,3 +199,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-08 21:10:43 | telegram | OK | BLAU3 | 1565744 | Comunicado ao Mercado | Apresentação Institucional - Setembro 2026 | chat 8369248929
 2026-09-08 23:30:28 | telegram | OK | HYPE3 | 1565908 | Comunicado ao Mercado | 22ª Emissão de Debêntures | chat 1496332324
 2026-09-08 23:30:29 | telegram | OK | HYPE3 | 1565908 | Comunicado ao Mercado | 22ª Emissão de Debêntures | chat 8369248929
+2026-09-08 23:40:22 | telegram | OK | HYPE3 | 1565910 | Dados Econômico-Financeiros | Rating ref. à 22ª Emissão de Debênture | chat 1496332324
+2026-09-08 23:40:23 | telegram | OK | HYPE3 | 1565910 | Dados Econômico-Financeiros | Rating ref. à 22ª Emissão de Debênture | chat 8369248929
