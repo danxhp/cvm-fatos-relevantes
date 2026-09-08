@@ -195,3 +195,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-04 21:25:28 | telegram | OK | COGN3 | 1565303 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-09-07 11:55:19 | telegram | OK | FLRY3 | 1565375 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-09-07 11:55:20 | telegram | OK | FLRY3 | 1565375 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-08 21:10:42 | telegram | OK | BLAU3 | 1565744 | Comunicado ao Mercado | Apresentação Institucional - Setembro 2026 | chat 1496332324
+2026-09-08 21:10:43 | telegram | OK | BLAU3 | 1565744 | Comunicado ao Mercado | Apresentação Institucional - Setembro 2026 | chat 8369248929
