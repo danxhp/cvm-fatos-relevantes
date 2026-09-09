@@ -221,3 +221,9 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-09 21:36:00 | telegram | OK | MATD3 | 1566372 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-09-09 22:20:23 | telegram | OK | HYPE3 | 1566429 | Comunicado ao Mercado | Aquisição Facultativa das Debêntures da 16ª Emissão | chat 1496332324
 2026-09-09 22:20:23 | telegram | OK | HYPE3 | 1566429 | Comunicado ao Mercado | Aquisição Facultativa das Debêntures da 16ª Emissão | chat 8369248929
+2026-09-09 22:30:30 | telegram | OK | HYPE3 | 1566431 | Comunicado ao Mercado | Aquisição Facultativa das Debêntures da 17ª Emissão | chat 1496332324
+2026-09-09 22:30:31 | telegram | OK | HYPE3 | 1566431 | Comunicado ao Mercado | Aquisição Facultativa das Debêntures da 17ª Emissão | chat 8369248929
+2026-09-09 22:30:31 | telegram | OK | ONCO3 | 1566434 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-09-09 22:30:32 | telegram | OK | ONCO3 | 1566434 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-09-09 22:30:32 | telegram | OK | ONCO3 | 1566433 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-09-09 22:30:33 | telegram | OK | ONCO3 | 1566433 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
