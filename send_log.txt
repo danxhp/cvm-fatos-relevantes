@@ -205,3 +205,11 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-09 12:30:27 | telegram | OK | ANIM3 | 1565989 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
 2026-09-09 21:05:20 | telegram | OK | BLAU3 | 1566193 | Fato Relevante | Waiver Free Float | chat 1496332324
 2026-09-09 21:05:21 | telegram | OK | BLAU3 | 1566193 | Fato Relevante | Waiver Free Float | chat 8369248929
+2026-09-09 21:15:40 | telegram | OK | RDOR3 | 1566216 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-09-09 21:15:40 | telegram | OK | RDOR3 | 1566216 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-09 21:15:41 | telegram | OK | RDOR3 | 1566217 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-09-09 21:15:42 | telegram | OK | RDOR3 | 1566217 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-09-09 21:15:42 | telegram | OK | YDUQ3 | 1566295 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-09-09 21:15:43 | telegram | OK | YDUQ3 | 1566295 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-09-09 21:15:43 | telegram | OK | YDUQ3 | 1566282 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-09-09 21:15:44 | telegram | OK | YDUQ3 | 1566282 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
