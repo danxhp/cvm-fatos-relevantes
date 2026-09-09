@@ -213,3 +213,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-09 21:15:43 | telegram | OK | YDUQ3 | 1566295 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-09-09 21:15:43 | telegram | OK | YDUQ3 | 1566282 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-09-09 21:15:44 | telegram | OK | YDUQ3 | 1566282 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-09 21:25:25 | telegram | OK | MATD3 | 1566359 | Fato Relevante | Extensão Waiver B3 | chat 1496332324
+2026-09-09 21:25:26 | telegram | OK | MATD3 | 1566359 | Fato Relevante | Extensão Waiver B3 | chat 8369248929
+2026-09-09 21:25:26 | telegram | OK | DASA3 | 1566357 | Comunicado ao Mercado | Tratamento excepcional – Desenquadramento do percentual mínimo de ações em circulação no mercado - Prorrogação Automática do Prazo pela B3 | chat 1496332324
+2026-09-09 21:25:27 | telegram | OK | DASA3 | 1566357 | Comunicado ao Mercado | Tratamento excepcional – Desenquadramento do percentual mínimo de ações em circulação no mercado - Prorrogação Automática do Prazo pela B3 | chat 8369248929
