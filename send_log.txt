@@ -219,3 +219,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-09 21:25:27 | telegram | OK | DASA3 | 1566357 | Comunicado ao Mercado | Tratamento excepcional – Desenquadramento do percentual mínimo de ações em circulação no mercado - Prorrogação Automática do Prazo pela B3 | chat 8369248929
 2026-09-09 21:35:59 | telegram | OK | MATD3 | 1566372 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
 2026-09-09 21:36:00 | telegram | OK | MATD3 | 1566372 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-09-09 22:20:23 | telegram | OK | HYPE3 | 1566429 | Comunicado ao Mercado | Aquisição Facultativa das Debêntures da 16ª Emissão | chat 1496332324
+2026-09-09 22:20:23 | telegram | OK | HYPE3 | 1566429 | Comunicado ao Mercado | Aquisição Facultativa das Debêntures da 16ª Emissão | chat 8369248929
