@@ -233,3 +233,11 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-10 14:35:21 | telegram | OK | VIVT3 | 1566662 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
 2026-09-10 14:45:24 | telegram | OK | VIVT3 | 1566671 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
 2026-09-10 14:45:25 | telegram | OK | VIVT3 | 1566671 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-09-10 20:30:30 | telegram | OK | HAPV3 | 1566874 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-09-10 20:30:30 | telegram | OK | HAPV3 | 1566874 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-10 20:30:31 | telegram | OK | HAPV3 | 1566878 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-09-10 20:30:31 | telegram | OK | HAPV3 | 1566878 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-09-10 20:30:32 | telegram | OK | HYPE3 | 1566920 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-09-10 20:30:32 | telegram | OK | HYPE3 | 1566920 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-10 20:30:33 | telegram | OK | HYPE3 | 1566922 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-09-10 20:30:33 | telegram | OK | HYPE3 | 1566922 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
