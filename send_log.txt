@@ -227,3 +227,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-09 22:30:32 | telegram | OK | ONCO3 | 1566434 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-09-09 22:30:32 | telegram | OK | ONCO3 | 1566433 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-09-09 22:30:33 | telegram | OK | ONCO3 | 1566433 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-09-10 01:00:29 | telegram | OK | ODPV3 | 1566466 | Comunicado ao Mercado | Cancelamento de Autorização de Funcionamento perante a ANS | chat 1496332324
+2026-09-10 01:00:30 | telegram | OK | ODPV3 | 1566466 | Comunicado ao Mercado | Cancelamento de Autorização de Funcionamento perante a ANS | chat 8369248929
