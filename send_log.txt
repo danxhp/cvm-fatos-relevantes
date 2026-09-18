@@ -265,3 +265,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-16 22:00:25 | telegram | OK | RDOR3 | 1568855 | Comunicado ao Mercado | Acordo Atlântica D Or Jundiaí | chat 8369248929
 2026-09-18 13:05:20 | telegram | OK | AFYA | 0001292814-26-004596 | SEC 6-K | 6-K | chat 1496332324
 2026-09-18 13:05:20 | telegram | OK | AFYA | 0001292814-26-004596 | SEC 6-K | 6-K | chat 8369248929
+2026-09-18 21:30:31 | telegram | OK | FLRY3 | 1569642 | Aviso aos Acionistas | Dividendos/Juros sobre Capital Próprio | chat 1496332324
+2026-09-18 21:30:31 | telegram | OK | FLRY3 | 1569642 | Aviso aos Acionistas | Dividendos/Juros sobre Capital Próprio | chat 8369248929
