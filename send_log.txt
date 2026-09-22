@@ -273,3 +273,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-21 21:40:27 | telegram | OK | RDOR3 | 1570154 | Comunicado ao Mercado | Distribuição de Juros Sobre Capital Próprio | chat 8369248929
 2026-09-22 21:45:24 | telegram | OK | YDUQ3 | 1570612 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 1496332324
 2026-09-22 21:45:24 | telegram | OK | YDUQ3 | 1570612 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
+2026-09-22 23:15:20 | telegram | OK | ONCO3 | 1570634 | Comunicado ao Mercado | Venda da participação na Medsir | chat 1496332324
+2026-09-22 23:15:20 | telegram | OK | ONCO3 | 1570634 | Comunicado ao Mercado | Venda da participação na Medsir | chat 8369248929
