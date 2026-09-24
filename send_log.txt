@@ -277,3 +277,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-22 23:15:20 | telegram | OK | ONCO3 | 1570634 | Comunicado ao Mercado | Venda da participação na Medsir | chat 8369248929
 2026-09-23 22:10:22 | telegram | OK | HYPE3 | 1571010 | Aviso aos Acionistas | Dividendos/Juros sobre Capital Próprio | chat 1496332324
 2026-09-23 22:10:22 | telegram | OK | HYPE3 | 1571010 | Aviso aos Acionistas | Dividendos/Juros sobre Capital Próprio | chat 8369248929
+2026-09-24 00:35:28 | telegram | OK | YDUQ3 | 1571031 | Fato Relevante | Fusão entre Yduqs e Afya | chat 1496332324
+2026-09-24 00:35:29 | telegram | OK | YDUQ3 | 1571031 | Fato Relevante | Fusão entre Yduqs e Afya | chat 8369248929
