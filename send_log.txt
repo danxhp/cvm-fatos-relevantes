@@ -285,3 +285,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-24 10:00:25 | telegram | OK | ONCO3 | 1571045 | Fato Relevante | Pedido de convocação de Assembleia Geral Extraordinária | chat 8369248929
 2026-09-24 10:05:20 | telegram | OK | AFYA | 0001292814-26-004684 | SEC 6-K | 6-K | chat 1496332324
 2026-09-24 10:05:20 | telegram | OK | AFYA | 0001292814-26-004684 | SEC 6-K | 6-K | chat 8369248929
+2026-09-24 20:55:55 | telegram | OK | BLAU3 | 1571288 | Aviso aos Acionistas | Dividendos/Juros sobre Capital Próprio | chat 1496332324
+2026-09-24 20:55:56 | telegram | OK | BLAU3 | 1571288 | Aviso aos Acionistas | Dividendos/Juros sobre Capital Próprio | chat 8369248929
