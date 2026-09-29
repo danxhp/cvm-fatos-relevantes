@@ -291,3 +291,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-29 11:55:26 | telegram | OK | ONCO3 | 1572276 | Fato Relevante | Ação Civil Pública | chat 8369248929
 2026-09-29 19:00:40 | telegram | OK | QUAL3 | 1572462 | Dados Econômico-Financeiros | Release 2T26 | chat 1496332324
 2026-09-29 19:00:40 | telegram | OK | QUAL3 | 1572462 | Dados Econômico-Financeiros | Release 2T26 | chat 8369248929
+2026-09-29 19:05:57 | telegram | OK | QUAL3 | 1572466 | Comunicado ao Mercado | Institucional 2T26 | chat 1496332324
+2026-09-29 19:05:58 | telegram | OK | QUAL3 | 1572466 | Comunicado ao Mercado | Institucional 2T26 | chat 8369248929
+2026-09-29 19:05:58 | telegram | OK | QUAL3 | 1572463 | Comunicado ao Mercado | Call 2T26 | chat 1496332324
+2026-09-29 19:05:59 | telegram | OK | QUAL3 | 1572463 | Comunicado ao Mercado | Call 2T26 | chat 8369248929
