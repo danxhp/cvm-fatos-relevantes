@@ -299,3 +299,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-09-29 21:05:37 | telegram | OK | YDUQ3 | 1572582 | Comunicado ao Mercado | Acordo de Associação entre Yduqs e Afya | chat 8369248929
 2026-09-30 00:30:25 | telegram | OK | ONCO3 | 1572678 | Fato Relevante | Pedido de Convocação de Assembleia Geral Extraordinária | chat 1496332324
 2026-09-30 00:30:26 | telegram | OK | ONCO3 | 1572678 | Fato Relevante | Pedido de Convocação de Assembleia Geral Extraordinária | chat 8369248929
+2026-09-30 01:55:28 | telegram | OK | ONCO3 | 1572682 | Fato Relevante | Pedido de Convocação de Assembleia Geral Extraordinária | chat 1496332324
+2026-09-30 01:55:28 | telegram | OK | ONCO3 | 1572682 | Fato Relevante | Pedido de Convocação de Assembleia Geral Extraordinária | chat 8369248929
