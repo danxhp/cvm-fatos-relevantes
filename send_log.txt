@@ -305,3 +305,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-01 10:10:23 | telegram | OK | AFYA | 0001292814-26-004772 | SEC 6-K | 6-K | chat 8369248929
 2026-10-01 10:10:24 | telegram | OK | AFYA | 0001292814-26-004770 | SEC 6-K | 6-K | chat 1496332324
 2026-10-01 10:10:24 | telegram | OK | AFYA | 0001292814-26-004770 | SEC 6-K | 6-K | chat 8369248929
+2026-10-01 11:35:20 | telegram | OK | ONCO3 | 1573087 | Fato Relevante | Renúncia Paulo Belem | chat 1496332324
+2026-10-01 11:35:20 | telegram | OK | ONCO3 | 1573087 | Fato Relevante | Renúncia Paulo Belem | chat 8369248929
