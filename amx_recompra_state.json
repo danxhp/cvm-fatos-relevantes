@@ -21,17 +21,28 @@
       "remanente": 15126294893.0,
       "remanente_anterior": 15175448691.0,
       "tesoreria": 271000000.0
+    },
+    "09/2026": {
+      "acoes_dia": 10000000.0,
+      "consistente": true,
+      "fecha": "30/09/2026",
+      "id": 1592358,
+      "importe_dia": 193471474.0,
+      "operacoes_dia": 36,
+      "remanente": 12169269194.0,
+      "remanente_anterior": 12362740668.0,
+      "tesoreria": 423000000.0
     }
   },
   "ultimo_fechamento": {
-    "acoes_dia": 2500000.0,
+    "acoes_dia": 10000000.0,
     "consistente": true,
-    "fecha": "31/08/2026",
-    "id": 1585645,
-    "importe_dia": 49153798.0,
-    "operacoes_dia": 15,
-    "remanente": 15126294893.0,
-    "remanente_anterior": 15175448691.0,
-    "tesoreria": 271000000.0
+    "fecha": "30/09/2026",
+    "id": 1592358,
+    "importe_dia": 193471474.0,
+    "operacoes_dia": 36,
+    "remanente": 12169269194.0,
+    "remanente_anterior": 12362740668.0,
+    "tesoreria": 423000000.0
   }
 }
