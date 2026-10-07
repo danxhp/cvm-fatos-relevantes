@@ -319,3 +319,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-06 21:50:29 | telegram | OK | QUAL3 | 1574849 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-10-07 12:55:23 | telegram | OK | MATD3 | 1574949 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
 2026-10-07 12:55:24 | telegram | OK | MATD3 | 1574949 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-10-07 21:15:26 | telegram | OK | FLRY3 | 1575183 | Dados Econômico-Financeiros | Relatório de crédito - Moodys | chat 1496332324
+2026-10-07 21:15:26 | telegram | OK | FLRY3 | 1575183 | Dados Econômico-Financeiros | Relatório de crédito - Moodys | chat 8369248929
