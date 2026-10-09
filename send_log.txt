@@ -335,3 +335,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-09 18:45:27 | telegram | OK | QUAL3 | 1575977 | Dados Econômico-Financeiros | relatório do agente fiduciário 2025 QUAL16 | chat 8369248929
 2026-10-09 19:40:26 | telegram | OK | ONCO3 | 1576021 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-10-09 19:40:27 | telegram | OK | ONCO3 | 1576021 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-10-09 19:45:26 | telegram | OK | VIVT3 | 1576067 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-10-09 19:45:27 | telegram | OK | VIVT3 | 1576067 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
