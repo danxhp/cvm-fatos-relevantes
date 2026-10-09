@@ -371,3 +371,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-09 21:40:26 | telegram | OK | RDOR3 | 1576329 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-10-09 21:40:27 | telegram | OK | RDOR3 | 1576320 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-10-09 21:40:27 | telegram | OK | RDOR3 | 1576320 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-10-09 22:25:27 | telegram | OK | HAPV3 | 1576366 | Dados Econômico-Financeiros | Relatório de Rating | chat 1496332324
+2026-10-09 22:25:28 | telegram | OK | HAPV3 | 1576366 | Dados Econômico-Financeiros | Relatório de Rating | chat 8369248929
+2026-10-09 22:25:28 | telegram | OK | HAPV3 | 1576367 | Comunicado ao Mercado | Rating | chat 1496332324
+2026-10-09 22:25:29 | telegram | OK | HAPV3 | 1576367 | Comunicado ao Mercado | Rating | chat 8369248929
