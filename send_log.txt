@@ -367,3 +367,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-09 21:10:31 | telegram | OK | DASA3 | 1576257 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
 2026-10-09 21:25:25 | telegram | OK | ONCO3 | 1576276 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
 2026-10-09 21:25:26 | telegram | OK | ONCO3 | 1576276 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-10-09 21:40:26 | telegram | OK | RDOR3 | 1576329 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-10-09 21:40:26 | telegram | OK | RDOR3 | 1576329 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-10-09 21:40:27 | telegram | OK | RDOR3 | 1576320 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-10-09 21:40:27 | telegram | OK | RDOR3 | 1576320 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
