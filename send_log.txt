@@ -397,3 +397,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-15 21:20:24 | telegram | OK | FLRY3 | 1577544 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
 2026-10-16 21:55:22 | telegram | OK | RDOR3 | 1578065 | Fato Relevante | Acordos de Acionistas e Cotistas Fami´lia Moll | chat 1496332324
 2026-10-16 21:55:22 | telegram | OK | RDOR3 | 1578065 | Fato Relevante | Acordos de Acionistas e Cotistas Fami´lia Moll | chat 8369248929
+2026-10-16 22:05:21 | telegram | OK | RDOR3 | 1578068 | Fato Relevante | Acordos de Acionistas e Cotistas Família Moll | chat 1496332324
+2026-10-16 22:05:22 | telegram | OK | RDOR3 | 1578068 | Fato Relevante | Acordos de Acionistas e Cotistas Família Moll | chat 8369248929
