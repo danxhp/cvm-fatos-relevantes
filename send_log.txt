@@ -399,3 +399,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-16 21:55:22 | telegram | OK | RDOR3 | 1578065 | Fato Relevante | Acordos de Acionistas e Cotistas Fami´lia Moll | chat 8369248929
 2026-10-16 22:05:21 | telegram | OK | RDOR3 | 1578068 | Fato Relevante | Acordos de Acionistas e Cotistas Família Moll | chat 1496332324
 2026-10-16 22:05:22 | telegram | OK | RDOR3 | 1578068 | Fato Relevante | Acordos de Acionistas e Cotistas Família Moll | chat 8369248929
+2026-10-19 21:10:29 | telegram | OK | ANIM3 | 1578384 | Fato Relevante | ACORDO ENTRE INSPIRALI E EINSTEIN | chat 1496332324
+2026-10-19 21:10:30 | telegram | OK | ANIM3 | 1578384 | Fato Relevante | ACORDO ENTRE INSPIRALI E EINSTEIN | chat 8369248929
