@@ -405,3 +405,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-19 21:35:42 | telegram | OK | ANIM3 | 1578403 | Comunicado ao Mercado | Apresentação - Fato Relevante Acordo entre Inspirali e Einstein | chat 8369248929
 2026-10-19 22:40:23 | telegram | OK | ONCO3 | 1578489 | Comunicado ao Mercado | Posse membro do Comitê de Auditoria | chat 1496332324
 2026-10-19 22:40:24 | telegram | OK | ONCO3 | 1578489 | Comunicado ao Mercado | Posse membro do Comitê de Auditoria | chat 8369248929
+2026-10-19 22:55:20 | telegram | OK | ONCO3 | 1578493 | Comunicado ao Mercado | Posse membro do Comitê de Auditoria | chat 1496332324
+2026-10-19 22:55:21 | telegram | OK | ONCO3 | 1578493 | Comunicado ao Mercado | Posse membro do Comitê de Auditoria | chat 8369248929
