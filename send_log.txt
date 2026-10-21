@@ -409,3 +409,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-19 22:55:21 | telegram | OK | ONCO3 | 1578493 | Comunicado ao Mercado | Posse membro do Comitê de Auditoria | chat 8369248929
 2026-10-21 20:45:25 | telegram | OK | ODPV3 | 1579115 | Aviso aos Acionistas | Dividendos/Juros sobre Capital Próprio | chat 1496332324
 2026-10-21 20:45:26 | telegram | OK | ODPV3 | 1579115 | Aviso aos Acionistas | Dividendos/Juros sobre Capital Próprio | chat 8369248929
+2026-10-21 21:05:42 | telegram | OK | ODPV3 | 1579122 | Dados Econômico-Financeiros | Relatório de Resultados 3T26 [Português e Inglês] | chat 1496332324
+2026-10-21 21:05:43 | telegram | OK | ODPV3 | 1579122 | Dados Econômico-Financeiros | Relatório de Resultados 3T26 [Português e Inglês] | chat 8369248929
