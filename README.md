@@ -2,7 +2,7 @@
 
 Monitora, na CVM, várias categorias de documentos de empresas brasileiras listadas
 (setor saúde/educação/telecom) — **Fato Relevante**, **Aviso aos Acionistas**,
-**Comunicado ao Mercado**, **ITR - Informações Trimestrais** e **Dados Econômico-Financeiros** —
+**Comunicado ao Mercado** e **Dados Econômico-Financeiros** (o ITR fica de fora; só o watcher de resultados vigia) —
 e formulários equivalentes (6-K/20-F/8-K) na SEC para emissoras listadas no exterior (ex.: Afya).
 Gera **resumos automáticos com Claude** e envia **alertas no Telegram** assim que um novo documento
 é publicado. (O envio por **email** existe no código, mas está **desativado** — `enabled: false`
@@ -80,7 +80,7 @@ pelo próprio Actions, para sobreviver entre execuções.
 
 | Fonte | Empresas | O que chega |
 |---|---|---|
-| **CVM / RAD** | 15 tickers B3 | Fato Relevante, Aviso aos Acionistas, Comunicado ao Mercado, ITR, Dados Econômico-Financeiros |
+| **CVM / RAD** | 15 tickers B3 | Fato Relevante, Aviso aos Acionistas, Comunicado ao Mercado, Dados Econômico-Financeiros (ITR fica de fora: só o `earnings_watch.py` vigia) |
 | **SEC / EDGAR** | `AFYA`, `AMX` | 6-K, 20-F, 8-K (e as versões `/A`) — ver `SEC_FORMS_OF_INTEREST` |
 
 | **BMV** (bolsa mexicana) | `AMX` | Recompra de ações, mensal — workflow separado, ver [`amx_recompra.py`](#recompra-mensal-da-amx-amx_recomprapy) |
@@ -690,6 +690,7 @@ Já foi usado nos resultados do **2T26** (FLRY3/HYPE3, BLAU3 e o lote de saúde/
 
 ```bash
 py earnings_watch.py            # inicia o watcher (roda até meia-noite ou até todos saírem)
+py earnings_watch.py --poll 20  # idem, checando a cada 20s em vez de 60s (só nesta execução)
 py earnings_watch.py --once     # uma checagem só: lista o estado atual, NÃO envia nada
 py earnings_watch.py --test     # manda um Telegram de teste para TODOS os destinos e sai
 ```

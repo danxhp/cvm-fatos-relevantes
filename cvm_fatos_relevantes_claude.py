@@ -4,7 +4,8 @@
 """
 CVM RAD + SEC EDGAR monitor for listed Brazilian companies.
 - CVM: several IPE categories (Fato Relevante, Aviso aos Acionistas, Comunicado ao Mercado,
-  ITR - Informações Trimestrais, Dados Econômico-Financeiros) — see CVM_ALLOWED_CATEGORIES.
+  Dados Econômico-Financeiros) — see CVM_ALLOWED_CATEGORIES. ITR is deliberately left out
+  here (earnings_watch.py watches it).
 - SEC EDGAR: 6-K / 20-F for foreign-listed issuers (e.g. Afya on NASDAQ).
 - Deduplicates by protocol / accession; silent when nothing is new.
 - AI summary (Claude) + alerts via Telegram (one bot per recipient) and email.
@@ -60,6 +61,7 @@ BASE_URL = "https://www.rad.cvm.gov.br/ENET/"
 LIST_URL = BASE_URL + "frmConsultaExternaCVM.aspx/ListarDocumentos"
 DOWNLOAD_URL = BASE_URL + "frmDownloadDocumento.aspx"
 VIEWER_URL = BASE_URL + "frmExibirArquivoIPEExterno.aspx"
+VIEWER_URL_ESTRUTURADO = BASE_URL + "frmGerenciaPaginaFRE.aspx"  # ITR/DFP (não-IPE)
 CONSULTA_URL = BASE_URL + "frmConsultaExternaCVM.aspx"
 
 # Categorias monitoradas na CVM. Em vez de uma requisição por código de categoria,
@@ -71,7 +73,9 @@ CVM_ALLOWED_CATEGORIES = {
     "Fato Relevante",
     "Aviso aos Acionistas",
     "Comunicado ao Mercado",
-    "ITR - Informações Trimestrais",
+    # ITR fica FORA do monitor normal (decisão de 27/10/2026): o release/DF já chega
+    # por "Dados Econômico-Financeiros" e o download do ITR é um ZIP, que não dá resumo.
+    # O earnings_watch.py vigia ITR passando a própria lista de categorias a parse_rows().
     "Dados Econômico-Financeiros",
     # Informe MENSAL "Negociação de Administradores e Pessoas Ligadas"
     # (Posição Consolidada / Individual). Traz, por grupo — Controlador,
@@ -349,8 +353,11 @@ def fetch_raw_documents(session: requests.Session, categoria: str) -> str:
 # PARSE
 # ============================================================================
 
-def parse_rows(raw: str) -> List[Filing]:
+def parse_rows(raw: str, categories: Optional[Set[str]] = None) -> List[Filing]:
     """
+    `categories`: nomes de categoria aceitos (padrão: CVM_ALLOWED_CATEGORIES, a lista
+    do monitor normal). O earnings_watch passa a sua, que inclui ITR.
+
     API row format:
       rows split by &*
       cols split by $&
@@ -370,6 +377,7 @@ def parse_rows(raw: str) -> List[Filing]:
       11 Assunto
     """
     filings: List[Filing] = []
+    allowed = CVM_ALLOWED_CATEGORIES if categories is None else categories
 
     if not raw.strip():
         return filings
@@ -387,7 +395,7 @@ def parse_rows(raw: str) -> List[Filing]:
             continue
 
         category = strip_html(cols[2])
-        if category not in CVM_ALLOWED_CATEGORIES:
+        if category not in allowed:
             continue
 
         company_cfg = COMPANY_CODES[cvm_code]
@@ -398,8 +406,11 @@ def parse_rows(raw: str) -> List[Filing]:
         raw_date = strip_html(cols[6])
         raw_date = re.sub(r"^\d{8}\s*", "", raw_date).strip()
 
+        # O 3º argumento (protocolo) é numérico no IPE ('1575479'), mas ALFANUMÉRICO
+        # em ITR/DFP ('020125ITR300920260100161789-77'). Com '(\d+)' as linhas de ITR
+        # eram descartadas em silêncio — o earnings_watch perdeu o ITR 3T26 da Bradsaúde.
         m = re.search(
-            r"OpenDownloadDocumentos\(\s*'(\d+)'\s*,\s*'(\d+)'\s*,\s*'(\d+)'\s*,\s*'([^']+)'\s*\)",
+            r"OpenDownloadDocumentos\(\s*'(\d+)'\s*,\s*'(\d+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*\)",
             cols[10],
         )
         if not m:
@@ -524,10 +535,16 @@ def build_viewer_url(filing: Filing) -> Optional[str]:
     como HTML — o usuário vê "%PDF-1.7 ... obj ... xref" na tela.
 
     O viewer é HTML de verdade, então funciona em qualquer navegador.
+
+    ITR/DFP (desc_type != "IPE") não abrem no viewer do IPE: usam o mesmo
+    frmGerenciaPaginaFRE.aspx do botão "Visualizar" do RAD, indexado pela sequência.
     """
     if "_sec_url" in filing.download_params or not filing.protocol:
         return None
     from urllib.parse import urlencode
+    if filing.desc_type and filing.desc_type != "IPE" and filing.sequence:
+        return VIEWER_URL_ESTRUTURADO + "?" + urlencode(
+            {"NumeroSequencialDocumento": filing.sequence, "CodigoTipoInstituicao": "1"})
     return VIEWER_URL + "?" + urlencode({"NumeroProtocoloEntrega": filing.protocol})
 
 

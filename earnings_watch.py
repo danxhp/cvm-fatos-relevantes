@@ -12,6 +12,7 @@ Avisa no PRIMEIRO documento de resultados de cada empresa (DF, ITR ou release), 
 
 Uso:
     py earnings_watch.py            # inicia o watcher (roda até meia-noite)
+    py earnings_watch.py --poll 20  # idem, checando a cada 20s em vez de 60s (só nesta execução)
     py earnings_watch.py --once     # uma checagem só (mostra o estado atual; NÃO envia nada)
     py earnings_watch.py --test     # manda um Telegram de teste para todos os destinos e sai
 
@@ -37,12 +38,12 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"YDUQ3", "DASA3", "AFYA"}         # YDUQ3/DASA3 na CVM; AFYA na SEC/EDGAR
+WATCH_TICKERS  = {"HYPE3"}                          # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
 # Avisa no PRIMEIRO documento de resultados de cada empresa, de qualquer um destes tipos:
 WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}
-WATCH_LABEL    = "Resultados 2T26"                  # texto no cabeçalho da mensagem
-SPEAK_NAMES    = {"YDUQ3": "Yduqs", "DASA3": "Dasa", "AFYA": "Afya"}  # falado: "saiu <nome>"
-POLL_SECONDS   = 60                                 # de minuto a minuto
+WATCH_LABEL    = "Resultados 3T26"                  # texto no cabeçalho da mensagem
+SPEAK_NAMES    = {"HYPE3": "Hypera", "ODPV3": "Bradesco Saúde"}  # falado: "saiu <nome>"
+POLL_SECONDS   = 60                                 # de minuto a minuto (sobrescreva com --poll N)
 # Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
 
@@ -65,8 +66,16 @@ def _doc_links(f) -> str:
     viewer = cvm.build_viewer_url(f)
     if viewer:
         return (f'📄 <a href="{e(viewer)}">Abrir documento</a>'
-                f'  ·  <a href="{dl}">baixar PDF</a>')
+                f'  ·  <a href="{dl}">baixar {"PDF" if f.desc_type == "IPE" else "ZIP"}</a>')
     return f'📄 <a href="{dl}">Abrir documento original</a>'
+
+
+def _desc(f) -> str:
+    """Assunto do documento. ITR/DFP vêm sem assunto e com tipo "-" (a categoria já vai no alerta)."""
+    for x in (f.subject, f.doc_type):
+        if x and x.strip(" -"):
+            return x
+    return "Documento"
 
 
 def log(msg: str) -> None:
@@ -152,8 +161,10 @@ def broadcast(text: str) -> None:
 def fetch_watch_filings(session) -> list:
     """Documentos de resultados das empresas vigiadas: categorias alvo na CVM (DF/ITR/release)
     + qualquer 6-K/20-F na SEC/EDGAR (ex.: AFYA, que não está na CVM)."""
-    out = [f for f in cvm.parse_rows(cvm.fetch_raw_documents(session, cvm.CVM_ALL_CATEGORIES))
-           if f.ticker in WATCH_TICKERS and f.category in WATCH_CATEGORIES]
+    # Passa WATCH_CATEGORIES ao parse: o monitor normal NÃO vigia ITR (fora de
+    # CVM_ALLOWED_CATEGORIES), mas aqui o ITR costuma ser o 1º documento de resultados.
+    raw = cvm.fetch_raw_documents(session, cvm.CVM_ALL_CATEGORIES)
+    out = [f for f in cvm.parse_rows(raw, WATCH_CATEGORIES) if f.ticker in WATCH_TICKERS]
     for c in cvm.COMPANIES:  # SEC/EDGAR para tickers vigiados que têm sec_cik (ex.: AFYA)
         if c.get("ticker") in WATCH_TICKERS and c.get("sec_cik"):
             out += cvm.fetch_sec_filings(session, c)
@@ -165,7 +176,7 @@ def render(f) -> str:
     return (
         f"🔔 <b>{e(WATCH_LABEL)} — {e(f.ticker)} · {e(f.company_name)}</b>\n"
         f"<b>{e(f.category)}</b>\n"
-        f"{e(f.subject or f.doc_type or 'Documento')}\n"
+        f"{e(_desc(f))}\n"
         f"🗓 {e(f.filing_time or '')}\n\n"
         + _doc_links(f)
     )
@@ -207,7 +218,7 @@ def run_watch() -> int:
     today_iso = start.strftime("%Y-%m-%d")   # para docs da SEC/EDGAR (data em ISO)
     midnight = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
     chats = ", ".join(str(d["chat_id"]) for d in DESTINATIONS)
-    log(f"Watcher iniciado. Vigiando {sorted(WATCH_TICKERS)} | {sorted(WATCH_CATEGORIES)} | hoje={today_str}.")
+    log(f"Watcher iniciado. Vigiando {sorted(WATCH_TICKERS)} | {sorted(WATCH_CATEGORIES)} | hoje={today_str} | a cada {POLL_SECONDS}s.")
     log(f"Destinos ({len(DESTINATIONS)}): {chats}. Encerra à meia-noite: {midnight:%Y-%m-%d %H:%M}.")
 
     seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
@@ -221,7 +232,7 @@ def run_watch() -> int:
         f"(ou à meia-noite {midnight:%H:%M})."
     )
     popup(f"Watcher {WATCH_LABEL} iniciado",
-          f"Vigiando {', '.join(sorted(WATCH_TICKERS))} de minuto a minuto.\n"
+          f"Vigiando {', '.join(sorted(WATCH_TICKERS))} a cada {POLL_SECONDS}s.\n"
           f"Pop-up + som + Telegram no primeiro documento de cada empresa.")
 
     while True:
@@ -250,7 +261,7 @@ def run_watch() -> int:
                     alerted.add(f.ticker)
                     name = SPEAK_NAMES.get(f.ticker, f.ticker)
                     popup(f"🔔 {WATCH_LABEL} — {f.ticker}",
-                          f"{f.company_name}\n{f.category}\n{f.subject or f.doc_type or ''}\n\n"
+                          f"{f.company_name}\n{f.category}\n{_desc(f)}\n\n"
                           f"Protocolo {f.protocol} · {f.filing_time}")
                     announce(("Saiu " + name + "! ") * 3)
                 text = render(f)
@@ -261,7 +272,7 @@ def run_watch() -> int:
                     if _post(d["bot_token"], d["chat_id"], text):
                         seen.add(key)
                         save_seen(seen)
-                        log(f"ENTREGUE {f.ticker} | {(f.subject or f.doc_type)} | proto {f.protocol} | {f.filing_time} -> chat {d['chat_id']}")
+                        log(f"ENTREGUE {f.ticker} | {_desc(f)} | proto {f.protocol} | {f.filing_time} -> chat {d['chat_id']}")
                     else:
                         log(f"FALHA {f.ticker} | proto {f.protocol} -> chat {d['chat_id']} (retento no próximo minuto)")
                 if all(k in seen for k in keys):
@@ -279,6 +290,10 @@ def run_watch() -> int:
 
 
 def main() -> int:
+    global POLL_SECONDS
+    if "--poll" in sys.argv:   # ex.: --poll 20 → checa a cada 20s só nesta execução
+        POLL_SECONDS = int(sys.argv[sys.argv.index("--poll") + 1])
+
     if "--test" in sys.argv:
         if not DESTINATIONS:
             print("Nenhum destino em email_config.json (telegram.destinations).")
@@ -292,7 +307,7 @@ def main() -> int:
         fs = fetch_watch_filings(cvm.make_session())
         print(f"{len(fs)} doc(s) {sorted(WATCH_CATEGORIES)} agora para {sorted(WATCH_TICKERS)}:")
         for f in fs:
-            print(f"  {f.ticker} | {(f.subject or f.doc_type)} | protocolo {f.protocol} | {f.filing_time}")
+            print(f"  {f.ticker} | {_desc(f)} | protocolo {f.protocol} | {f.filing_time}")
         print(f"Destinos configurados: {[str(d['chat_id']) for d in DESTINATIONS]}")
         return 0
 
