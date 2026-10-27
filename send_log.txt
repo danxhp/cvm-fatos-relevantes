@@ -421,3 +421,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-27 20:10:25 | telegram | OK | ONCO3 | 1580591 | Comunicado ao Mercado | Comunicado ao Mercado - Notícia veiculada na mídia | chat 8369248929
 2026-10-27 22:20:31 | telegram | OK | HYPE3 | 1580862 | Dados Econômico-Financeiros | Press Release 3T26 | chat 1496332324
 2026-10-27 22:20:32 | telegram | OK | HYPE3 | 1580862 | Dados Econômico-Financeiros | Press Release 3T26 | chat 8369248929
+2026-10-27 22:50:31 | telegram | OK | HYPE3 | 1580871 | Fato Relevante | Aprovação do novo Programa de Recompra de Ações Ordinárias da Companhia | chat 1496332324
+2026-10-27 22:50:32 | telegram | OK | HYPE3 | 1580871 | Fato Relevante | Aprovação do novo Programa de Recompra de Ações Ordinárias da Companhia | chat 8369248929
