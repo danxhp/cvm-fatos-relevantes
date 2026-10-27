@@ -33,6 +33,8 @@ no `email_config.json`; basta voltar a `true` e re-subir o secret para reativar.
   - [4. Secrets necessários](#4-secrets-necessários)
 - [Recompra mensal da AMX (`amx_recompra.py`)](#recompra-mensal-da-amx-amx_recomprapy)
 - [Informe mensal de insiders e controlador](#informe-mensal-de-insiders-e-controlador)
+- [Planilha de recompras e insiders (`buybacks_cvm.py`)](#planilha-de-recompras-e-insiders-buybacks_cvmpy) ← **atualização mensal manual**
+- [Painel de recompras (`buybacks_dashboard.html`)](#painel-de-recompras-buybacks_dashboardhtml)
 - [Por que o alerta traz DOIS links](#por-que-o-alerta-traz-dois-links)
 - [Falhas silenciosas: o que o heartbeat NÃO vê](#falhas-silenciosas-o-que-o-heartbeat-não-vê)
 - [Operação: como saber se está vivo](#operação-como-saber-se-está-vivo)
@@ -114,6 +116,13 @@ mesmo caminho da Afya, sem código novo. Isso cobre **resultados e eventos mater
 | `.github/workflows/amx_recompra.yml` | Workflow mensal (`cron: 10 13 2 * *`) do relatório de recompra. |
 | `amx_recompra_state.json` | Último fechamento mensal da AMX (id, data, remanente, tesouraria). Versionado — é a base de comparação do mês seguinte, sem ele o cálculo exige varredura profunda. |
 | `amx_recompra_log.txt` | Log da varredura de IDs na BMV. **Não versionado.** |
+| `buybacks_cvm.py` | **Planilha de recompras e insiders** — lê os formulários mensais "Valores Mobiliários Negociados e Detidos" e gera o xlsx. Roda **local, manual**. Ver [seção dedicada](#planilha-de-recompras-e-insiders-buybacks_cvmpy). |
+| `buybacks_cvm.xlsx` | A planilha (abas Empresa, Controladores, Administradores, Detalhe, Documentos, Leia-me). Regerada inteira a cada execução. Versionada. |
+| `buybacks_cache.json` | Resultado do parse de cada PDF, por protocolo. **Versionado** — a próxima execução só baixa e lê o que não está aqui. |
+| `buybacks_pdfs/` | PDFs baixados. **Não versionado** (`.gitignore`); só serve para reparse local, e é rebaixado se faltar. |
+| `buybacks_dashboard.html` | **Painel de recompras** (HTML autocontido, abre no navegador). Regerado por `buybacks_cvm.py`. Ver [seção dedicada](#painel-de-recompras-buybacks_dashboardhtml). |
+| `build_buybacks_dashboard.py` / `buybacks_dashboard_template.html` | Cálculo dos números do painel / layout e gráficos (HTML, CSS, JS). |
+| `buybacks_mercado.py` / `buybacks_mercado.json` | Cotação diária da B3 e quantidade de ações (ITR/DFP) para o painel, com a tabela de eventos societários. O JSON é o cache **versionado**. |
 | `requirements.txt` | Dependências Python. |
 
 ---
@@ -507,8 +516,11 @@ A categoria **"Valores Mobiliários Negociados e Detidos"** entrega o formulári
 Conselho Fiscal — traz **saldo inicial**, **movimentações do mês** (dia, quantidade, preço,
 volume em R$) e **saldo final**, por espécie (ON/PN).
 
-> ⚠️ **Isto não é recompra da companhia.** É negociação de *insiders* e do controlador. A
-> recompra de ações próprias (tesouraria) é outra divulgação e **não sai por esta categoria**.
+> **A mesma categoria traz a recompra da companhia.** Além da `Posição Consolidada` (insiders e
+> controlador), a companhia entrega a `Posição Individual - Cia, Controladas e Coligadas`, com o
+> que a **própria companhia** (tesouraria) negociou no mês — é ali que aparece a recompra (ex.:
+> RDOR3 comprou 4.172.700 ações em 08/2026, R$ 140,5 mi). Os dois formulários alimentam a
+> [planilha de recompras e insiders](#planilha-de-recompras-e-insiders-buybacks_cvmpy).
 
 **Tempestividade (medida, não estimada):** referência é o **mês fechado** (`08/2026`) e a
 entrega observada foi em **01/09/2026** — primeiro dia do mês seguinte, para as 18 companhias
@@ -519,8 +531,253 @@ Como o formulário é tabular, o prompt genérico produzia resumo vago. `CATEGOR
 injeta instrução específica para essa categoria, pedindo saldo final por espécie e as
 movimentações com preço e volume, e um único bullet curto quando não houve operações no mês.
 
-> **Ruído esperado:** o informe é mensal e obrigatório mesmo sem operações. Boa parte dos
-> alertas será "não houve movimentação no mês", para cada empresa e cada tipo de posição.
+> **Ruído esperado:** o envio é exigido até 10 dias após o fim de cada mês **com alteração de
+> posição** (Res. CVM 44, art. 11, §6), mas na prática a maioria das companhias entrega todo mês,
+> mesmo sem operações. Boa parte dos alertas será "não houve movimentação no mês", para cada
+> empresa e cada tipo de posição.
+
+---
+
+## Planilha de recompras e insiders (`buybacks_cvm.py`)
+
+Gera [`buybacks_cvm.xlsx`](buybacks_cvm.xlsx) com o que cada companhia monitorada (os tickers
+B3 de `COMPANIES`) comprou e vendeu **em ações próprias** no mês, separado em três abas:
+
+| Aba | Quem | Formulário CVM |
+|---|---|---|
+| **Empresa** | a própria companhia (tesouraria) e controladas — **recompra** | `Posição Individual - Cia, Controladas e Coligadas` |
+| **Controladores** | grupo Controlador | `Posição Consolidada` |
+| **Administradores** | Conselho de Administração + Diretoria | `Posição Consolidada` |
+
+Colunas: `Empresa · Ticker · Mês e ano · Operação (Compra/Venda) · Qtd movimentada · Preço médio (R$)
+· Valor total (R$)`. Qtd e valor são fórmulas `SUMIFS` sobre a aba **Detalhe** (uma linha por
+operação lida, com link para o PDF), e o preço médio é ponderado (valor / qtd) — dá para auditar
+qualquer número até o documento. A aba **Documentos** lista todo documento encontrado, as
+reapresentações substituídas, o que ainda não foi entregue e a conferência de saldo.
+
+**Roda local e manualmente** (não há workflow). Começa em `START_REF = "2024-10"`: 24 meses, para
+haver 12 meses completos e os 12 anteriores para comparar. A mesma execução regera o
+[painel HTML](#painel-de-recompras-buybacks_dashboardhtml).
+
+### Atualização mensal — passo a passo
+
+O prazo da CVM é **10 dias após o fim do mês**, então o mês M fica completo por volta do dia 10 de
+M+1. Rode **a partir do dia 11**. Rodar antes não quebra nada: o que falta aparece como
+`NÃO ENCONTRADO` na aba Documentos e entra na rodada seguinte.
+
+```bash
+git pull                      # traz o cache (e o fatos_arquivo.csv) atualizados
+py buybacks_cvm.py            # lista, baixa SÓ os PDFs novos, lê, regera o xlsx e o painel
+```
+
+1. **Leia a saída.** Linhas `VERIFICAR <ticker> <mês> ...` = documento cujo saldo não fecha ou
+   com texto que o parser não consumiu. Abra o link na aba Documentos e confira no PDF. No fim
+   sai o resumo do último mês por aba.
+2. **Confira a aba Documentos**: linhas amarelas são `NÃO ENCONTRADO` (empresa ainda não
+   entregou) ou `VERIFICAR`.
+3. **Operação de tipo novo?** `py buybacks_cvm.py --offline --dump-ops` lista toda descrição de
+   operação distinta com a classificação dada (`Compra`/`Venda`/`Outros`). Se algo estiver errado,
+   ajuste `NAO_MERCADO` / `classificar_operacao()` e rode `py buybacks_cvm.py --offline` —
+   classificação é aplicada na montagem, **não precisa reler PDF**.
+4. **Leia os avisos do painel** (`WARNING:` no fim da saída) — ver
+   [manutenção do painel](#manutenção-do-painel).
+5. **Commit** de `buybacks_cache.json`, `buybacks_mercado.json`, `buybacks_cvm.xlsx` e
+   `buybacks_dashboard.html`.
+
+| Flag | Faz |
+|---|---|
+| *(nenhuma)* | atualização normal |
+| `--offline` | não consulta CVM nem B3; só regera xlsx e painel a partir do cache |
+| `--reparse` | relê todos os PDFs (rebaixa os que não estão em `buybacks_pdfs/`) |
+| `--dump-ops` | lista descrições de operação distintas e sua classificação |
+| `--sem-painel` | não regera o painel HTML |
+
+Mudanças comuns: **ticker novo** entra sozinho quando é adicionado a `COMPANIES` em
+`cvm_fatos_relevantes_claude.py` (com `cvm_code`). **Mudar o início** do histórico: `START_REF`.
+**Virada de ano**: automática. **Mudou o parser** (regex/seções): suba `PARSER_VERSION` — as
+entradas antigas do cache são relidas na próxima execução.
+
+### De onde vem a lista de documentos
+
+Duas fontes, unidas pelo número de protocolo:
+
+1. **Dados abertos da CVM** (`dados.cvm.gov.br/.../IPE/ipe_cia_aberta_<ano>.zip`): histórico
+   completo desde 2003, mas atualizado **~1x por semana** (em 09/10/2026 o arquivo ia até 03/10).
+2. **RAD**, o mesmo endpoint do monitor, por **intervalo de datas** (`periodo=2`, últimos
+   `RAD_LOOKBACK_DAYS = 45` dias): cobre a defasagem. Se o RAD falhar, sai um `WARNING` e só os
+   documentos dos últimos dias ficam para a próxima rodada.
+
+**Reapresentação:** empresas reentregam meses antigos (HAPV3 reapresentou 07/2026 em outubro). Por
+(ticker, mês, formulário) vale só o **protocolo mais recente** (o número da CVM é sequencial); os
+anteriores ficam na aba Documentos como "Substituído pelo …".
+
+### Como o PDF é lido
+
+O PDF é gerado pelo próprio sistema da CVM (layout fixo), mas o texto extraído pelo `pypdf` quebra
+as células de forma diferente em cada documento. Por isso o parser **ancora no rabo numérico**: toda
+linha de movimentação termina em `dia quantidade preço volume`, e o texto antes disso é a descrição
+(valor mobiliário, características, intermediário, operação). Armadilhas encontradas e tratadas:
+
+- **Linha quebrada na virada de página:** o `pypdf` devolve o resto da descrição *depois* dos
+  números (`...plano de 30 3.280 34,52 113.225,60 remuneração Ações ON ...`). O início de cada
+  linha é reconhecido pelo valor mobiliário (`Ações ON`, `Debêntures`, `Derivativos`…) e o que vem
+  antes volta para a linha anterior.
+- **Ações da controladora:** o consolidado também traz seções `Denominação da Controladora` —
+  administradores da VIVT3 com ações da **Telefónica S.A.**. Não são ações da companhia; ficam em
+  Detalhe com Aba = Outros.
+- **`Qualificação:` em branco** no formulário individual (RDOR3, HAPV3, COGN3…) — tratado como
+  companhia.
+- **Sinal negativo:** a HAPV3 informa entrega de ações de plano como `-217.984` a `-12,72`.
+
+### O que entra nos resumos
+
+Só **ações** negociadas **no mercado** (compra/venda à vista ou a termo, inclusive "compra motivada
+pelo programa de recompra" e o rótulo seco "RECOMPRA DE AÇÕES", que a YDUQ3 usou em 10/2024 e
+12/2024). Fica só na aba Detalhe, com Operação = `Outros`: vesting/ILP/plano de remuneração,
+liquidação física de swap, empréstimo de ações (tomador/locador), subscrição, bonificação e leilão
+de frações, posse/saída de cargo, cancelamento, contribuição a holding, doação, penhora judicial, e
+também debêntures, opções, derivativos e ADRs. Conselho Fiscal e Órgãos Técnicos também vão para
+`Outros`. Duas classes próprias, também fora dos resumos da planilha:
+
+- **`Compra s/ preço` / `Venda s/ preço`**: compra ou venda declarada com preço e volume zerados
+  (ONCO3 12/2025: venda de 102.000 ações por conselheiro). O saldo confirma que as ações saíram,
+  então a quantidade fecha a conferência; o painel valoriza pelo VWAP do dia na B3 e marca "≈".
+- **`Rolagem a termo`**: no mesmo dia e na mesma seção, "venda à vista" e "compra a termo" (ou o
+  inverso) somando a mesma quantidade — às vezes em várias linhas (HYPE3: 4.392 + 40.608 a termo
+  contra 45.000 à vista). A posição não muda; é captação via termo, não compra nem venda.
+
+Decisões tomadas com o usuário em 09/10/2026: compras e vendas em linhas separadas;
+administradores = CA + Diretoria (Lei 6.404); atualização manual local. Em 13/10/2026, junto com o
+painel, o histórico passou de 01/2026 para **10/2024** (12 meses completos + 12 anteriores).
+
+### Conferência embutida
+
+Para cada seção (grupo/entidade), em ações: **saldo inicial + compras − vendas = saldo final**. Ex.:
+controlador da HAPV3 em 08/2026: 196.263.730 + 910.500 compradas + 4 × 89.048 recebidas por swap =
+197.530.422, exatamente o saldo declarado. Na aba Documentos: `OK` = fecha exato; `OK*` = a
+diferença é coberta por operações não-mercado do mesmo grupo (vesting, cancelamento, swap…);
+`VERIFICAR` (amarelo) = conferir no PDF. Só conta como cobertura a linha com motivo não-mercado
+(palavra de `NAO_MERCADO`) ou sem preço: uma linha **com preço** e sem rótulo nenhum não cobre nada
+— foi assim que "RECOMPRA DE ACOES" da YDUQ3 passava como `OK*`. Na carga inicial (755
+documentos, 10/2024–09/2026) nenhum ficou em `VERIFICAR`.
+
+> ⚠️ **Sintoma de mudança de layout:** se a CVM mudar o formulário, aparecem `NÃO LIDO` /
+> `texto não lido` na aba Documentos e a conferência de saldo começa a falhar. Formulário entregue
+> como PDF livre/escaneado (fora do sistema da CVM) também sai como `NÃO LIDO`.
+
+---
+
+## Painel de recompras (`buybacks_dashboard.html`)
+
+[`buybacks_dashboard.html`](buybacks_dashboard.html) é um painel **autocontido**: abre direto no
+navegador, sem servidor e sem biblioteca externa (só as fontes do Google, com fallback do sistema;
+os dados vão embutidos). No topo, um seletor de empresa agrupado por setor e o período: o último
+mês (o botão leva o nome dele, ex.: **Setembro 2026**, e avança sozinho na atualização mensal), 12 ou
+24 meses; tudo abaixo se atualiza na hora. O painel abre no último mês; o endereço guarda a empresa
+(`buybacks_dashboard.html#RDOR3`) e o navegador lembra o período escolhido. **Cobertura** no seletor = soma
+das 15 empresas.
+
+| Bloco | O que mostra |
+|---|---|
+| Indicadores | recompra da própria companhia em 12 meses (e variação contra os 12 anteriores), recompra / valor de mercado, % das ações ex-tesouraria recompradas, preço médio pago vs. último fechamento, ações em tesouraria. Controladores e administradores não entram nesses números: têm gráfico e colunas próprias. No modo último mês, os mesmos indicadores só do mês: recompra vs. o mês anterior e vs. a média mensal dos 12 meses, preço pago vs. VWAP do mês na B3, tesouraria no fim do mês e a variação nele |
+| Recompra mensal | colunas em R$ mi; no modo 24 meses os 12 anteriores ficam em cinza; no modo último mês, o mês fica em azul e os 11 anteriores em cinza (os outros gráficos e a tabela também destacam o mês; o mapa contorna a coluna dele, sem mudar as cores da escala); mês sem formulário fica hachurado |
+| Recompra acumulada em 12 meses | soma móvel de 12 meses |
+| Preço pago x preço de mercado | preço médio da recompra (pontos) contra o VWAP do mês na B3 (linha) e a faixa mínima–máxima |
+| Ações em tesouraria | saldo no fim de cada mês (companhia + controladas) |
+| Controladores e administradores | compras e vendas **em bolsa** (à vista e a termo), compras acima de zero, vendas abaixo, em R$ mi. Fora: swap/derivativos (inclusive com liquidação física), subscrição, empréstimo, planos e rolagem a termo. Grupo que o formulário não traz fica "não informado", não zero (a VIVT3 nunca informa o controlador; o art. 11 da Res. CVM 44 não obriga) |
+| Mês a mês | tabela com todos os números e links para os dois formulários na CVM |
+| Comparativo da cobertura | ranking de 12 meses, ou do mês no modo último mês (por R$, % das ações ou % do valor de mercado), e mapa de calor mês a mês; clicar numa empresa abre os gráficos dela (no celular, o 1º toque numa célula mostra o valor e o 2º abre a empresa) |
+
+Arquivos: `build_buybacks_dashboard.py` calcula os números; `buybacks_dashboard_template.html` é o
+layout (HTML/CSS/JS, gráficos em SVG desenhados no navegador); `buybacks_mercado.py` busca preço e
+quantidade de ações. Para regerar só o painel: `py build_buybacks_dashboard.py` (ou `--offline`).
+
+### Fontes (oficiais, sem chave de API)
+
+| Dado | Fonte | Cache versionado |
+|---|---|---|
+| Recompra, insiders, tesouraria | formulários mensais da CVM (o mesmo cache da planilha) | `buybacks_cache.json` |
+| Preço: fechamento, VWAP, mínima e máxima | B3, séries históricas `COTAHIST_M<mm><aaaa>.ZIP`, mercado à vista, por pregão | `buybacks_mercado.json` |
+| Quantidade de ações (total e tesouraria) | CVM, ITR/DFP, tabela "composição do capital" (trimestral) | `buybacks_mercado.json` |
+
+A execução mensal baixa só o mês novo da B3 (~10 MB) e o ITR/DFP do ano corrente (~20 MB, no máximo
+uma vez por semana). O mês corrente nunca entra: o arquivo da B3 dele ainda está incompleto.
+
+### Definições
+
+- **12 meses** = os 12 meses até o último mês de referência do painel, iguais para todas as
+  empresas; "12 anteriores" = os 12 antes deles. O último mês é o mais recente cujo prazo de entrega
+  já passou (ou que 80% das empresas já entregaram) — uma empresa que entrega cedo não empurra a
+  janela de todas.
+- **Último mês** (modo mês) = esse mesmo último mês de referência, sozinho. Compara com o mês
+  anterior e com a média mensal dos 12 meses (na empresa, só os meses com formulário; na cobertura,
+  a soma dos 12 meses ÷ 12). Valor de mercado e ações ex-tesouraria são os mesmos do modo 12 meses.
+  Na cobertura, empresa sem formulário no mês fica fora da soma, das duas comparações (mês anterior
+  e média, que usam as mesmas empresas) e do valor de mercado da razão, e é nomeada no aviso. Razão
+  positiva abaixo de 0,005% aparece como "< 0,01%". Queda da tesouraria por cancelamento é dita no
+  card. O botão passa para o mês novo quando o painel é regerado depois do prazo de entrega.
+- **Ações ex-tesouraria** = total do último ITR/DFP, menos os cancelamentos lançados depois dele,
+  menos a tesouraria do último formulário mensal. **Não** é o free float ("ações em circulação" da
+  Res. CVM 77, que também exclui controlador e administradores).
+- **Valor de mercado** = ações ex-tesouraria × fechamento do último mês com pregão.
+- **Recompra / valor de mercado** = recompra dos 12 meses ÷ valor de mercado **atual**. Se o preço
+  caiu muito depois da recompra, o número infla: a HAPV3 aparece com ~12% porque recomprou a
+  R$ 18,82 em média e fechou set/26 a R$ 6,67. O card avisa quando o fechamento está mais de 25%
+  abaixo do preço pago e mostra a medida que não depende do preço: **% das ações** (4,3% na HAPV3),
+  que também é uma das ordenações do ranking.
+- **Mês sem formulário** não vira zero: fica sem dado (hachurado) e o painel avisa, nomeando a
+  empresa e o mês. Formulário listado na CVM cujo PDF não foi lido (download que falhou) também fica
+  sem dado, com aviso, e a próxima execução tenta de novo.
+- **Recompra bruta**: entregas a planos, cancelamentos e derivativos sobre as próprias ações não são
+  abatidos.
+
+### Base de ações atual (eventos societários)
+
+Grupamento, desdobramento e bonificação mudam a quantidade de ações sem mudar o valor da empresa.
+Sem ajuste, a HAPV3 "sobe" de R$ 2,70 para R$ 40,00 num pregão. Por isso quantidades, preços e
+tesouraria são reexpressos na base de ações **de hoje**, pela data de cada evento
+(`buybacks_mercado.EVENTOS_ACOES`; R$ não muda). Cada evento guarda também o primeiro ITR/DFP já na
+base nova, porque o DFP pode contar as ações novas antes do 1º pregão ex (BLAU3: DFP de 31/12/2025,
+ex em 06/01/2026). Saldo de fim de mês segue a data do lançamento no formulário (a COGN3 lançou a
+bonificação no dia 23, ex em 26/12). Depois da bonificação, a BLAU3 passou a informar no ITR o total
+**sem** a tesouraria; `acoes_em()` detecta isso (total + tesouraria = total anterior × fator) e
+soma a tesouraria de volta.
+
+| Ticker | Evento | Fator | 1º pregão ex | Conferido em |
+|---|---|---|---|---|
+| VIVT3 | desdobramento 1:2 | 2 | 15/04/2025 | ITR (1.630 → 3.261 mi de ações) e salto de abertura 51,00 → 25,50 |
+| HAPV3 | grupamento 15:1 | 1/15 | 06/06/2025 | ITR (7.539 → 503 mi) e abertura 2,70 → 40,00 |
+| COGN3 | bonificação de 10% | 1,1 | 26/12/2025 | ITR (×1,1) e tesouraria no formulário (62.435.142 → 68.678.656) |
+| BLAU3 | bonificação de 30% | 1,3 | 06/01/2026 | tesouraria (1.713.200 → 2.227.160) e controlador (×1,3) no formulário |
+
+Outras mudanças de capital **não** são reexpressas, porque mudam o valor da empresa: aumentos de
+capital (DASA3, ONCO3, HYPE3), a incorporação que transformou a Odontoprev em **Bradsaúde**
+(546 → 2.924 mi de ações) e cancelamentos. Mudança de código: a ODPV3 negocia como **SAUD3** desde
+05/05/2026 (`B3_ALIASES`; nome em `NOME_ATUAL`). A ONCO3 passou para o segmento de recuperação
+extrajudicial da B3 (código BDI 07) em 15/07/2026 — por isso o código BDI não é filtrado.
+
+### Manutenção do painel
+
+Os avisos saem no fim de `py buybacks_cvm.py` (ou de `py build_buybacks_dashboard.py`):
+
+| Aviso | O que fazer |
+|---|---|
+| `WARNING: <TICKER> <mês>: formulário ... lança '...bonificação/desdobramento/grupamento...' sem evento` | O formulário registrou um evento que não está em `EVENTOS_ACOES`. Confira no ITR e no fato relevante e acrescente `(1º pregão ex, fator, 1º ITR na base nova)`. Se o fator líquido for 1 (ex.: grupamento + desdobramento simultâneos da TIMS3 em 07/2025, que só limpou frações), acrescente em `EVENTOS_FORM_CONFERIDOS`. Pega bônus pequenos, que não dão salto de preço. |
+| `WARNING: <TICKER> <data>: abertura X o fechamento anterior — evento societário não cadastrado?` | Salto de abertura > 25%. Confira no ITR (composição do capital) e nos fatos relevantes. Se for grupamento/desdobramento/bonificação, acrescente em `EVENTOS_ACOES`; se for movimento de mercado, acrescente em `SALTOS_CONFERIDOS` (`build_buybacks_dashboard.py`) para silenciar. |
+| `WARNING: ... a R$ X, fora da faixa da B3 no mês` | Preço informado fora da mínima–máxima do mês (±2%): erro de digitação no formulário ou negócio fora de bolsa. O número fica como foi entregue; confira o PDF. Conhecidos: ODPV3 11/2024 (R$ 1,10 com a ação a ~R$ 10,7), HYPE3 01/2025 e YDUQ3 02/2025. |
+| `WARNING: <TICKER>: emissão de ações em ..., depois do ITR` | Aumento de capital/incorporação depois do último ITR: o total de ações (e o valor de mercado) fica velho até o próximo ITR; o card avisa. |
+| `WARNING: B3 <mês>: sem cotação para <TICKER>` | O ticker sumiu da B3 no mês: mudança de código ou suspensão. Acrescente o código novo em `B3_ALIASES` (e o nome em `NOME_ATUAL`); os meses afetados são baixados de novo sozinhos na execução seguinte. |
+| `WARNING: <TICKER> <mês>: formulário listado mas não lido` | O download do PDF falhou (3 tentativas). O mês fica sem dado e a próxima execução tenta de novo. |
+| `WARNING: <TICKER>: tesouraria no ITR ... x formulário ... escala do ITR suspeita` | O ITR veio numa escala diferente (milhares). Confira `acoes_em()`. |
+| `ERROR: buybacks_cvm.xlsx está aberto` | Feche o Excel e rode `py buybacks_cvm.py --offline`. O painel é gerado mesmo assim. |
+| `ERROR: painel não foi regerado` | A planilha foi gravada; rode `py build_buybacks_dashboard.py` para ver o erro completo. |
+
+Empresa nova na cobertura: basta entrar em `COMPANIES` (com `cvm_code`) e ganhar um setor em
+`SETOR` (`build_buybacks_dashboard.py`); sem setor ela aparece em "Outros".
+
+**Publicar como Artifact do Claude:** `py build_buybacks_dashboard.py --artifact <arquivo>` grava
+também a versão "fragmento" (sem `<html>`/`<head>`), que é o formato aceito pela publicação. Peça ao
+Claude para republicar no mesmo endereço depois da atualização mensal.
 
 ---
 

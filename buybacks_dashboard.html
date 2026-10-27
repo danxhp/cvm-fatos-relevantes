@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html{color-scheme:light}body{margin:0;font:14px/1.5 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Radar de Recompras B3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: mesa de análise — seletor fixo no topo, faixa de indicadores, grade de
+   gráficos (2 colunas; 1 no celular), tabela mês a mês e o comparativo da cobertura.
+   Gráficos em SVG desenhados no navegador; cores de série validadas (dataviz). */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #f6f8fb;
+  --ink: #0e1420;
+  --ink-2: #3d4656;
+  --muted: #5b6472;
+  --hair: #e7eaef;
+  --axis: #c6ccd5;
+  --border: rgba(14, 20, 32, 0.10);
+  --s1: #2a78d6;           /* companhia (recompra) */
+  --s2: #eb6834;           /* controladores */
+  --s3: #1baf7a;           /* administradores */
+  --deemph: #c5cbd5;       /* período de comparação */
+  --line-mkt: #5b6472;     /* preço de mercado */
+  --band-mkt: rgba(91, 100, 114, 0.14);
+  --warn-ink: #8a5a00;
+  --warn-bg: #fff4d6;
+  --heat-0: #eef1f5;
+  --heat-1: #cde2fb;
+  --heat-2: #86b6ef;
+  --heat-3: #3987e5;
+  --heat-4: #256abf;
+  --heat-5: #104281;
+  --shadow: 0 1px 2px rgba(14, 20, 32, 0.05), 0 8px 24px rgba(14, 20, 32, 0.06);
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0e13;
+    --surface: #151a22;
+    --surface-2: #1b212b;
+    --ink: #f2f5f9;
+    --ink-2: #c9d1dd;
+    --muted: #a3acba;
+    --hair: #232a35;
+    --axis: #3a4250;
+    --border: rgba(255, 255, 255, 0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --deemph: #3d4553;
+    --line-mkt: #a3acba;
+    --band-mkt: rgba(163, 172, 186, 0.16);
+    --warn-ink: #ffcf66;
+    --warn-bg: #3a2e12;
+    --heat-0: #1b212b;
+    --heat-1: #104281;
+    --heat-2: #1c5cab;
+    --heat-3: #2a78d6;
+    --heat-4: #5598e7;
+    --heat-5: #9ec5f4;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0e13;
+  --surface: #151a22;
+  --surface-2: #1b212b;
+  --ink: #f2f5f9;
+  --ink-2: #c9d1dd;
+  --muted: #a3acba;
+  --hair: #232a35;
+  --axis: #3a4250;
+  --border: rgba(255, 255, 255, 0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --deemph: #3d4553;
+  --line-mkt: #a3acba;
+  --band-mkt: rgba(163, 172, 186, 0.16);
+  --warn-ink: #ffcf66;
+  --warn-bg: #3a2e12;
+  --heat-0: #1b212b;
+  --heat-1: #104281;
+  --heat-2: #1c5cab;
+  --heat-3: #2a78d6;
+  --heat-4: #5598e7;
+  --heat-5: #9ec5f4;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+@media (max-width: 520px) { .wrap { padding-inline: 16px; } }
+
+/* ---------- topo ---------- */
+.top { padding-block: 28px 18px; display: grid; gap: 10px; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); margin: 0;
+}
+h1 { font-size: 28px; line-height: 1.15; font-weight: 600; letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--ink-2); max-width: 68ch; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 2px 0 0; padding: 0; list-style: none;
+  font-size: 12px; color: var(--muted); }
+.facts b { color: var(--ink-2); font-weight: 500; }
+
+/* ---------- controles (fixos) ---------- */
+.controls {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.controls .wrap { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding-block: 10px; }
+.chips {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1 1 560px; min-width: 0;
+  padding-block: 2px;
+}
+.grp {
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  padding-inline: 6px 0; white-space: nowrap;
+}
+/* celular: empresas numa faixa rolável de largura total (com esmaecido à direita
+   indicando que há mais), período na linha de baixo, tudo mais compacto para a
+   barra fixa ocupar menos tela */
+@media (max-width: 760px) {
+  .controls .wrap { padding-block: 8px; gap: 6px 10px; }
+  .chips {
+    flex-wrap: nowrap; overflow-x: auto; flex-basis: 100%; scrollbar-width: none;
+    padding-inline-end: 28px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { padding: 4px 10px; font-size: 12px; }
+  .seg button { padding: 3px 10px; font-size: 12px; }
+}
+.nw { white-space: nowrap; }
+.chip, .seg button, .sort button {
+  font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--ink-2); border-radius: 999px; padding: 5px 11px; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px; transition: background .12s, color .12s, border-color .12s;
+}
+.chip { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; }
+.chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--s1); }
+.chip .dot.off { background: transparent; box-shadow: inset 0 0 0 1px var(--axis); }
+.chip:hover, .seg button:hover, .sort button:hover { background: var(--surface-2); color: var(--ink); }
+.chip[aria-checked="true"], .seg button[aria-checked="true"], .sort button[aria-pressed="true"] {
+  background: var(--ink); color: var(--surface); border-color: var(--ink);
+}
+.chip[aria-checked="true"] .dot { background: var(--surface); }
+.chip[aria-checked="true"] .dot.off { box-shadow: inset 0 0 0 1px var(--surface); background: transparent; }
+.chip.all { font-family: var(--font-ui); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; background: var(--surface); flex: none; }
+.seg button { border: 0; padding: 4px 11px; font-size: 12.5px; background: transparent; }
+/* larguras intermediárias: chips e período mais justos, para a barra fixa não
+   ganhar uma linha por causa do botão do mês */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .chips { gap: 4px; }
+  .chip { padding: 5px 9px; }
+  .grp { padding-inline: 2px 0; }
+  .seg button { padding: 4px 8px; }
+}
+:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+
+/* ---------- cabeçalho da empresa ---------- */
+.ent { padding-block: 22px 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.ent h2 { font-size: 22px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+.ent .tk { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.flag {
+  display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 500;
+  color: var(--warn-ink); background: var(--warn-bg); border-radius: 999px; padding: 3px 10px;
+}
+.flag svg { flex: none; }
+
+/* ---------- indicadores ---------- */
+/* destaque à esquerda ocupando duas linhas + grade 2x2 de indicadores */
+.kpis { display: grid; gap: 12px; grid-template-columns: minmax(0, 1.25fr) repeat(2, minmax(0, 1fr)); margin-block: 6px 18px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; min-width: 0; }
+.tile.hero { grid-row: span 2; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; box-shadow: var(--shadow); }
+.tile .k { font-size: 12px; color: var(--muted); margin: 0 0 4px; }
+.tile .v { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; overflow-wrap: anywhere; }
+.tile.hero .v { font-size: 48px; letter-spacing: -0.03em; line-height: 1.02; }
+.tile .d { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; }
+.tile .d .m { color: var(--muted); }
+.delta { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--ink); }
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile.hero { grid-column: 1 / -1; grid-row: auto; }
+  .tile.hero .v { font-size: 40px; }
+}
+
+/* ---------- cartões e gráficos ---------- */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.grid .wide { grid-column: 1 / -1; }
+@media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 16px 16px 10px; margin: 0; min-width: 0;
+}
+.card header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 6px 12px; margin-bottom: 6px; }
+.card h3 { font-size: 14px; font-weight: 600; margin: 0; }
+.card .cap { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin: 4px 0 2px; padding: 0; list-style: none; }
+.legend li { display: inline-flex; align-items: center; gap: 6px; }
+.legend .ln { width: 14px; height: 2px; border-radius: 2px; display: inline-block; }
+.legend .dt { width: 9px; height: 9px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px var(--surface); }
+.legend .bd { width: 14px; height: 9px; border-radius: 2px; display: inline-block; }
+.legend .ht { width: 14px; height: 9px; border-radius: 2px; display: inline-block; background: repeating-linear-gradient(135deg, var(--axis) 0 2px, transparent 2px 5px); }
+.plot { position: relative; outline-offset: 4px; border-radius: 6px; }
+.plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+.note { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+.empty { font-size: 13px; color: var(--muted); padding: 30px 0; text-align: center; }
+
+svg text { font-family: var(--font-ui); }
+.gl { stroke: var(--hair); stroke-width: 1; shape-rendering: crispEdges; }
+.base { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+.yt { fill: var(--muted); font-size: 11px; text-anchor: end; font-variant-numeric: tabular-nums; }
+.xt { fill: var(--muted); font-size: 11px; text-anchor: middle; }
+.xt.yr { fill: var(--ink-2); font-weight: 500; }
+.vl { fill: var(--ink); font-size: 11px; font-weight: 600; text-anchor: middle; font-variant-numeric: tabular-nums;
+  paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.vl.start { text-anchor: start; }
+.vl.end { text-anchor: end; }
+.vl.sub { fill: var(--muted); font-weight: 400; }
+.hit { fill: transparent; }
+.mk { transition: opacity .12s; }
+.on .mk.dim { opacity: .45; }
+.xh { stroke: var(--ink-2); stroke-width: 1; opacity: 0; pointer-events: none; }
+.xh.show { opacity: .5; }
+.selrow { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+.rowlab { font-family: var(--font-mono); font-size: 11.5px; fill: var(--ink-2); cursor: pointer; }
+.rowlab.cur { fill: var(--ink); font-weight: 500; }
+.rowhit { fill: transparent; cursor: pointer; }
+.rowhit:hover { fill: var(--surface-2); }
+/* modo mês: faixa atrás do mês em foco, rótulo dele em negrito e, no mapa, a
+   coluna contornada (as cores das células não mudam: são a escala de valor) */
+.faixa-foco { fill: var(--s1); opacity: .09; }
+.xt.mfoco { fill: var(--ink); font-weight: 600; }
+.selcol { fill: none; stroke: var(--s1); stroke-width: 1.5; pointer-events: none; }
+/* no ranking, rótulo e barra deixam o clique passar para a linha inteira */
+#c-rank text, #c-rank .mk { pointer-events: none; }
+
+/* ---------- tabela ---------- */
+.tblwrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+caption { text-align: left; font-size: 12px; color: var(--muted); padding-bottom: 8px; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--hair); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; vertical-align: bottom; white-space: normal; min-width: 72px; }
+tbody tr:hover { background: var(--surface-2); }
+/* coluna do mês fixa ao rolar a tabela para o lado (celular) */
+th:first-child, td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--hair); }
+tbody tr:hover th:first-child { background: var(--surface-2); }
+td.na { color: var(--muted); }
+th.ltm-start, td.ltm-start { border-top: 2px solid var(--axis); }
+/* cor sólida: a 1ª coluna é fixa e precisa cobrir o que rola por baixo */
+tbody tr.foco > * { background: color-mix(in srgb, var(--s1) 10%, var(--surface)); }
+tbody tr.foco:hover > th:first-child, tbody tr.foco:hover > td { background: color-mix(in srgb, var(--s1) 16%, var(--surface)); }
+.tile .w { color: var(--warn-ink); font-size: 12px; margin-top: 4px; display: flex; gap: 5px; align-items: flex-start; }
+.tile .w svg { flex: none; margin-top: 2px; }
+a { color: var(--s1); text-underline-offset: 2px; }
+td a { font-family: var(--font-mono); font-size: 11.5px; }
+.tag { font-size: 10.5px; color: var(--warn-ink); background: var(--warn-bg); border-radius: 4px; padding: 1px 5px; margin-left: 6px; font-weight: 500; }
+
+/* ---------- cobertura ---------- */
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; padding-block: 34px 10px; border-top: 1px solid var(--border); margin-top: 26px; }
+.sec-head h2 { font-size: 20px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+.sec-head p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.sort { display: inline-flex; gap: 4px; }
+.sort button { font-size: 12px; padding: 3px 10px; }
+.scale { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 11.5px; color: var(--ink-2); margin: 6px 0 0; padding: 0; list-style: none; }
+.scale li { display: inline-flex; align-items: center; gap: 5px; }
+.scale .sw { width: 16px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* ---------- notas ---------- */
+.notes { margin-block: 30px 40px; padding-top: 22px; border-top: 1px solid var(--border); display: grid; gap: 10px; color: var(--ink-2); font-size: 12.5px; }
+.notes h2 { font-size: 14px; margin: 0; color: var(--ink); }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; max-width: 92ch; }
+.notes code { font-family: var(--font-mono); font-size: 11.5px; background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }
+
+/* ---------- tooltip ---------- */
+.tip {
+  position: fixed; z-index: 50; pointer-events: none; min-width: 150px; max-width: 280px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .18); padding: 9px 11px; font-size: 12px; line-height: 1.4;
+  opacity: 0; transition: opacity .1s;
+}
+.tip.on { opacity: 1; }
+.tip .t { font-weight: 600; margin-bottom: 4px; color: var(--ink-2); font-size: 11.5px; }
+.tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tip .r .l { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.tip .r .l i { width: 12px; height: 2px; border-radius: 2px; display: inline-block; }
+.tip .r b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.tip .w { color: var(--warn-ink); margin-top: 4px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">CVM · Res. 44, art. 11 · B3</p>
+    <h1>Radar de Recompras</h1>
+    <p class="lede">Quanto cada companhia da cobertura recomprou das próprias ações, mês a mês, e o que
+      controladores e administradores compraram e venderam no mesmo período.</p>
+    <ul class="facts" id="facts"></ul>
+  </header>
+</div>
+
+<nav class="controls" aria-label="Seleção">
+  <div class="wrap">
+    <div class="chips" id="sel" role="radiogroup" aria-label="Empresa"></div>
+    <div class="seg" id="per" role="radiogroup" aria-label="Período">
+      <button type="button" role="radio" data-per="1" id="per1">Último mês</button>
+      <button type="button" role="radio" data-per="12" id="per12">12 meses</button>
+      <button type="button" role="radio" data-per="24" id="per24">24 meses</button>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap" id="app">
+  <section aria-labelledby="ent-nome">
+    <div class="ent">
+      <h2 id="ent-nome"></h2>
+      <span class="tk" id="ent-tk"></span>
+      <span id="ent-flags"></span>
+    </div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid">
+      <figure class="card wide" id="c-rec">
+        <header><div><h3>Recompra mensal</h3><p class="cap">R$ milhões · compras de ações no mercado pela companhia e controladas</p></div><ul class="legend" id="lg-rec"></ul></header>
+        <div class="plot" tabindex="0"></div>
+      </figure>
+      <figure class="card" id="c-roll">
+        <header><div><h3>Recompra acumulada em 12 meses</h3><p class="cap">R$ milhões · soma móvel dos 12 meses até cada mês</p></div></header>
+        <div class="plot" tabindex="0"></div>
+      </figure>
+      <figure class="card" id="c-px">
+        <header><div><h3>Preço pago x preço de mercado</h3><p class="cap">R$ por ação, na base de ações atual</p></div>
+          <ul class="legend">
+            <li><span class="dt" style="background:var(--s1)"></span>Preço médio da recompra</li>
+            <li><span class="ln" style="background:var(--line-mkt)"></span>Preço médio do mês (VWAP B3)</li>
+            <li><span class="bd" style="background:var(--band-mkt)"></span>Mínima–máxima do mês</li>
+          </ul></header>
+        <div class="plot" tabindex="0"></div>
+      </figure>
+      <figure class="card" id="c-tes">
+        <header><div><h3>Ações em tesouraria</h3><p class="cap">Milhões de ações no fim de cada mês (companhia e controladas)</p></div></header>
+        <div class="plot" tabindex="0"></div>
+      </figure>
+      <figure class="card" id="c-ins">
+        <header><div><h3>Controladores e administradores</h3><p class="cap">R$ milhões · compras e vendas em bolsa (à vista e a termo) · acima de zero, compras; abaixo, vendas</p></div>
+          <ul class="legend">
+            <li><span class="bd" style="background:var(--s2)"></span>Controladores</li>
+            <li><span class="bd" style="background:var(--s3)"></span>Administradores</li>
+          </ul></header>
+        <div class="plot" tabindex="0"></div>
+        <p class="note" id="ins-nota" hidden></p>
+        <p class="note">Fora da conta: swap e outros derivativos (inclusive com liquidação física), subscrição, empréstimo de ações, planos de remuneração e rolagem a termo (venda à vista + compra a termo no mesmo dia).</p>
+      </figure>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <header><div><h3>Mês a mês</h3><p class="cap" id="tbl-cap"></p></div></header>
+      <div class="tblwrap"><table id="tbl"></table></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="cob-h">
+    <div class="sec-head">
+      <h2 id="cob-h">Comparativo da cobertura</h2>
+      <p>Clique numa empresa para abrir os gráficos dela.</p>
+    </div>
+    <div class="grid">
+      <figure class="card" id="c-rank">
+        <header><div><h3>Recompra em 12 meses</h3><p class="cap" id="rank-cap"></p></div>
+          <div class="sort" role="group" aria-label="Ordenar por">
+            <button type="button" data-sort="v" aria-pressed="true">R$</button>
+            <button type="button" data-sort="q" aria-pressed="false">% das ações</button>
+            <button type="button" data-sort="y" aria-pressed="false">% do valor de mercado</button>
+          </div></header>
+        <div class="plot" tabindex="0"></div>
+      </figure>
+      <figure class="card" id="c-heat">
+        <header><div><h3>Mapa da recompra mensal</h3><p class="cap">R$ milhões recomprados por mês</p></div></header>
+        <div class="plot" tabindex="0"></div>
+        <ul class="scale" id="heat-scale"></ul>
+      </figure>
+    </div>
+  </section>
+
+  <footer class="notes" id="notes"></footer>
+</main>
+
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+  const D = {"meta":{"gerado":"16/10/2026 09:51","hoje":"2026-10-16","inicio":"2024-10","ultimo":"2026-09","prazo_ultimo":"2026-10-10","pendentes_ultimo":["HAPV3"],"eventos":{"VIVT3":[["2025-04-15",2.0,"2025-06-30"]],"HAPV3":[["2025-06-06",0.06666666666666667,"2025-06-30"]],"COGN3":[["2025-12-26",1.1,"2025-12-31"]],"BLAU3":[["2026-01-06",1.3,"2025-12-31"]]},"aliases":{"ODPV3":["SAUD3"]},"viewer":"https://www.rad.cvm.gov.br/ENET/frmExibirArquivoIPEExterno.aspx"},"meses":["2024-10","2024-11","2024-12","2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09"],"entidades":[{"id":"COBERTURA","nome":"Cobertura","b3":null,"kpi":{"ltm_v":2680045994.4,"prev_v":3710467932.4799995,"ltm_faltas":["2026-09"],"prev_faltas":[],"faltas_por_empresa":{"HAPV3":["2026-09"]},"ltm_v_est":0,"n_recompraram":9,"n_empresas":15,"mcap":313226735841.88995,"yield":0.008556249156690217,"lider":"RDOR3","lider_pct":0.4411099962091009,"mes_v":550320.99,"mes_v_est":0,"mes_ant_v":392534579.64,"mes_ant_faltas":[],"mes_media":191350317.36666667,"mes_media_n":12,"mes_n_com_form":14,"mes_faltas":["HAPV3"],"mes_n_recompraram":1,"mes_mcap":310057899348.79,"mes_yield":1.7748974986795402e-06,"mes_lider":"MATD3","mes_lider_pct":1.0},"s":{"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","parcial"],"rec_v":[171446831,286196742,807671177,484364642,285489141,136491966,96585665,4642557,405071066,351390406,486334616,194783123,156089799,710435728,220323407,1111978,163482693,191904140,19438782,60734707,643547648,119892212,392534580,550321],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,51983171,201785586,0,0,13283566,0,194838,0,0,0,0,0,250090015,9763877,1992302,117327718,384719314,340842684,935521179,78443579,199962603,68641852,16046396],"ctrl_vv":[0,8180,0,19900,0,0,0,0,149160,0,0,0,0,0,0,0,0,0,0,218000,26712,0,347100,526892],"adm_cv":[109478,735593,787771,656750,1665602,1475198,263448,359790,0,0,0,136800,0,2664800,644505,319998,0,4013482,0,438002,0,585000,423729,5250],"adm_vv":[780600,427026,1157242,19977,315432,150540,10839222,70587293,3320489,5606602,3969932,3372457,3389046,67569914,6055056,9508967,18570137,891966,2313639,1722692,1705459,20210,3539639,4286555],"adm_vv_e":[0,19576,0,0,0,0,0,0,0,0,0,0,0,0,214805,0,0,0,0,19783,0,0,0,0],"faltas":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"roll":[null,null,null,null,null,null,null,null,null,null,null,3710467932,3695110901,4119349887,3532002116,3048749452,2926743004,2982155178,2905008295,2961100445,3199577027,2968078832,2874278796,2680045994],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,1]}},{"id":"RDOR3","nome":"Rede D'Or","b3":"RDOR3","setor":"Saúde","kpi":{"ltm_v":1182195078.43,"ltm_q":33690400.0,"ltm_v_est":0,"ltm_px":35.089968609158696,"ltm_faltas":[],"prev_v":976048445.59,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":38.29,"fech_mes":"2026-09","acoes_total":2240292590,"acoes_circ":2172628749.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.015506745004413085,"mcap":83189954799.20999,"yield":0.01421079121010926,"tes":67663841.0,"tes_mes":"2026-09","tes_pct":0.03020312672640675,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":37.3602389672461,"mes_ant_v":140534940.77,"mes_media":98516256.53583334,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":67663841.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[0,264724386,340391145,160478043,83558043,71948890,54947937,0,0,0,0,0,0,0,0,0,158270386,128782324,0,0,638068008,116539419,140534941,0],"rec_q":[0,9296700,12662400,5999800,2917500,2550700,1925000,0,0,0,0,0,0,0,0,0,3805000,3304000,0,0,19002500,3406200,4172700,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,50046182,102858324,0,0,13283566,0,0,0,0,0,0,0,0,0,0,117327718,327973043,107107863,729192599,14907951,84073817,0,0],"ctrl_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cq":[0,1862900,3786800,0,0,473100,0,0,0,0,0,0,0,0,0,0,2875700,8539600,2696200,20493241,441100,2466300,0,0],"ctrl_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vv":[0,0,367242,0,0,0,0,0,0,0,0,0,0,65365475,0,0,6792729,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vq":[0,0,14000,0,0,0,0,0,0,0,0,0,0,1415314,0,0,157000,0,0,0,0,0,0,0],"tes":[47213894,56510594,69172994,75135094,78073482,80624182,82549182,82549182,82549182,82549182,82549182,82549182,82755036,82755036,82882567,82971855,86776855,90080855,90080855,90080855,60084941,63491141,67663841,67663841],"vwap":[29.936,28.6547,26.7909,27.0238,28.818,28.0595,29.5785,34.8773,35.5815,33.7114,36.7083,40.4634,41.0769,45.9573,44.3644,41.7848,42.2862,38.2246,40.1509,35.927,33.681,34.7561,34.0906,37.3602],"fech":[29.36,27.05,25.42,27.95,27.19,28.2,32.02,37.78,35.42,32.5,39.36,42.08,43.34,46.63,40.61,42.39,40.3,38.97,38.37,34.02,34.71,34.64,35.18,38.29],"lo":[28.9,26.39,24.84,24.77,26.88,26.15,27.8,31.31,34.33,31.85,32.33,38.41,39.38,42.72,40.11,39.71,40.05,36.16,37.34,33.5,32.34,32.94,32.27,35.1],"hi":[31.3,30.29,28.67,28.86,30.8,29.22,32.11,38.27,38.12,35.82,39.58,43.05,43.44,48.41,47.86,45.1,45.38,40.35,43.39,40.84,35.4,36.5,36.55,38.81],"prot_i":["1301224","1312967","1323536","1332118","1344917","1359707","1375433","1389490","1399329","1410922","1421762","1431300","1443071","1455073","1466071","1475953","1488585","1503186","1519184","1533164","1543557","1555288","1566216","1576320"],"prot_c":["1301219","1312979","1323535","1332119","1344916","1359708","1375432","1390206","1399331","1410926","1421769","1431302","1442136","1455074","1466072","1475959","1488599","1503187","1519188","1533167","1543558","1555291","1566217","1576329"],"rec_px":[null,28.4751,26.882,26.7472,28.6403,28.2075,28.5444,null,null,null,null,null,null,null,null,null,41.5954,38.9777,null,null,33.5781,34.2139,33.6796,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,976048446,976048446,711324059,370932914,210454871,285167214,342000648,287052711,287052711,925120719,1041660138,1182195078,1182195078],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"HAPV3","nome":"Hapvida","b3":"HAPV3","setor":"Saúde","kpi":{"ltm_v":383842186.0,"ltm_q":20395600.0,"ltm_v_est":0,"ltm_px":18.81985261526996,"ltm_faltas":["2026-09"],"prev_v":199978355.0,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":6.67,"fech_mes":"2026-09","acoes_total":502630884,"acoes_circ":475087930.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.042930158213028057,"mcap":3168836493.1,"yield":0.12113032238671805,"tes":27542954.0,"tes_mes":"2026-08","tes_pct":0.054797575868815895,"mes_v":null,"mes_q":null,"mes_v_est":null,"mes_px":null,"mes_vwap":6.7057857449339275,"mes_ant_v":0,"mes_media":34894744.18181818,"mes_media_n":11,"mes_pct_circ":null,"mes_yield":null,"mes_tes":null,"mes_tes_var":null,"mes_canc_q":null},"s":{"rec_v":[0,0,199978355,0,0,0,0,0,0,0,0,0,0,383842186,0,0,0,0,0,0,0,0,0,null],"rec_q":[0,0,4973333,0,0,0,0,0,0,0,0,0,0,20395600,0,0,0,0,0,0,0,0,0,null],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,null],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,null],"ctrl_cv":[0,1936989,97955162,0,0,0,0,0,0,0,0,0,0,250090015,9763877,1992302,0,0,0,0,0,0,5965872,0],"ctrl_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cq":[0,48502,2456867,0,0,0,0,0,0,0,0,0,0,13258100,672100,141700,0,0,0,0,0,0,910500,0],"ctrl_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,2539800,0,0,0,0,0,0,0,0,51040,0],"adm_vv":[0,0,0,0,0,0,0,0,0,0,1931300,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,134000,0,0,0,0,0,0,0,0,8000,0],"adm_vq":[0,0,0,0,0,0,0,0,0,0,50500,0,0,0,0,0,0,0,0,0,0,0,0,0],"tes":[3004881,3004881,7978214,7978214,7978214,7978214,7978214,7978214,7617524,7617524,7541927,7509427,7509427,27905027,27905027,27905027,27800813,27570745,27564704,27542954,27542954,27542954,27542954,null],"vwap":[57.2137,46.2183,36.5662,34.7043,34.2773,33.415,33.801,40.164,38.7511,33.3711,37.3999,39.0417,33.5257,19.8079,14.3217,14.1635,11.0886,9.2398,12.0791,12.4696,11.0803,10.7188,7.3846,6.7058],"fech":[52.8,40.5,33.45,36.3,31.65,33.15,34.8,42.9,36.85,33.07,41.71,35.85,31.28,14.1,14.73,13.0,10.49,10.1,12.39,12.15,10.21,11.28,6.61,6.67],"lo":[52.5,38.85,31.65,31.5,30.6,29.7,29.85,33.45,35.44,30.51,32.53,35.78,31.25,14.09,12.77,12.85,9.97,7.0,9.9,10.99,9.94,9.81,6.01,6.11],"hi":[63.15,53.1,42.3,37.5,39.15,37.05,37.8,44.85,43.8,37.07,42.15,42.66,36.53,32.77,15.61,16.68,13.26,10.45,14.2,14.42,12.43,11.63,12.2,7.48],"prot_i":["1302229","1313855","1322281","1332850","1344956","1360343","1376391","1389204","1400029","1411482","1422407","1431938","1442869","1455462","1466415","1475766","1488152","1503629","1520157","1533144","1543907","1555167","1566874",null],"prot_c":["1302234","1313866","1322282","1332855","1344958","1360352","1376393","1389205","1400030","1411484","1422409","1431939","1442871","1455477","1466420","1475784","1488175","1503631","1528534","1533149","1543908","1576076","1566878","1576091"],"rec_px":[null,null,40.2101,null,null,null,null,null,null,null,null,null,null,18.8199,null,null,null,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","parcial"],"roll":[null,null,null,null,null,null,null,null,null,null,null,199978355,199978355,583820541,383842186,383842186,383842186,383842186,383842186,383842186,383842186,383842186,383842186,383842186],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,1]}},{"id":"FLRY3","nome":"Fleury","b3":"FLRY3","setor":"Saúde","kpi":{"ltm_v":35554129.0,"ltm_q":2300000.0,"ltm_v_est":0,"ltm_px":15.45831695652174,"ltm_faltas":[],"prev_v":0,"prev_faltas":[],"sem_ctrl":true,"sem_adm":false,"fech":22.79,"fech_mes":"2026-09","acoes_total":547191026,"acoes_circ":543626208.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.004230848266976856,"mcap":12389241280.32,"yield":0.002869758381126764,"tes":3564818.0,"tes_mes":"2026-09","tes_pct":0.006514759618883077,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":21.065322451189008,"mes_ant_v":0,"mes_media":2962844.0833333335,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":3564818.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,35554129,0,0,0,0,0,0],"rec_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2300000,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_cq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"adm_cv":[0,0,123236,0,0,1474012,0,0,0,0,0,0,0,0,116705,70054,0,55482,0,0,0,0,0,0],"adm_vv":[0,0,0,0,0,48000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15192,0,2172556,2506858],"adm_cq":[0,0,10000,0,0,125000,0,0,0,0,0,0,0,0,7300,4500,0,3300,0,0,0,0,0,0],"adm_vq":[0,0,0,0,0,4000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1025,0,119733,125000],"tes":[2911287,2911287,2911287,2911287,2175555,2175555,2175555,2175555,2175555,2175555,2175555,2175555,2175555,2175555,2175555,2175555,1266046,3564818,3564818,3564818,3564818,3564818,3564818,3564818],"vwap":[15.0105,13.8566,12.9681,11.8031,11.783,11.4926,12.2201,12.7198,13.061,13.8126,14.247,15.7453,14.8333,15.568,14.9239,15.8548,17.1159,15.7944,16.487,16.0036,15.044,16.2388,18.5358,21.0653],"fech":[14.82,13.18,12.07,11.84,11.09,11.7,12.99,12.85,13.02,14.35,14.89,16.14,14.55,16.05,15.0,16.62,16.82,15.93,16.08,15.39,15.4,17.14,19.68,22.79],"lo":[14.56,12.94,12.07,11.21,11.09,10.65,11.28,12.16,12.61,12.48,13.72,15.06,13.97,14.43,13.9,14.67,16.33,14.83,15.54,15.23,14.31,15.15,17.13,19.01],"hi":[15.54,14.76,13.81,12.43,12.66,12.25,13.13,13.34,13.55,15.19,14.91,16.35,16.19,16.19,16.1,17.31,18.1,17.04,17.72,16.96,15.73,17.26,19.73,23.06],"prot_i":["1299088","1312318","1322233","1332889","1344724","1358541","1376453","1387927","1398486","1410873","1420283","1431403","1443177","1454095","1465897","1476752","1488362","1533171","1520124","1533175","1543261","1555565","1565375","1576462"],"prot_c":["1299089","1312319","1322239","1332898","1344727","1358540","1418699","1418700","1418702","1418704","1420286","1431404","1443178","1454099","1560519","1560520","1560521","1560522","1560523","1560524","1560525","1560526","1566958","1576463"],"rec_px":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,15.4583,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,35554129,35554129,35554129,35554129,35554129,35554129,35554129],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"DASA3","nome":"Dasa","b3":"DASA3","setor":"Saúde","kpi":{"ltm_v":0,"ltm_q":0,"ltm_v_est":0,"ltm_px":null,"ltm_faltas":[],"prev_v":0,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":4.02,"fech_mes":"2026-09","acoes_total":1255007048,"acoes_circ":1249838742.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.0,"mcap":5024351742.839999,"yield":0.0,"tes":5168306.0,"tes_mes":"2026-09","tes_pct":0.004118148984291601,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":3.1920152339499457,"mes_ant_v":0,"mes_media":0.0,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":5168306.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"rec_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,249944,0,0,0,0,0,0,0,0],"adm_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62800,0,0,0,0,0,0,0,0],"adm_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tes":[5357777,5357777,5357777,5357777,5357777,5357777,5357777,5344126,5344126,5344126,5232506,5232506,5232506,5232506,5232506,5232506,5232506,5204082,5203536,5203536,5182665,5180375,5168306,5168306],"vwap":[2.8267,2.3824,2.0022,1.9222,1.7798,1.9034,1.8072,1.7373,1.4124,1.3078,1.368,1.3356,1.456,2.5986,3.6835,4.1328,4.1955,3.2543,3.2098,3.238,2.7821,2.769,2.5077,3.192],"fech":[2.65,2.26,1.9,1.86,1.67,1.84,1.76,1.59,1.31,1.24,1.33,1.29,1.74,3.14,4.54,4.26,4.03,2.92,3.38,3.1,2.71,2.61,2.61,4.02],"lo":[2.57,2.05,1.68,1.81,1.65,1.6,1.71,1.57,1.29,1.18,1.22,1.27,1.28,1.56,2.91,3.6,3.95,2.36,2.9,2.81,2.6,2.41,2.0,2.51],"hi":[3.13,2.82,2.4,2.14,1.91,2.18,1.96,1.96,1.63,1.5,1.58,1.44,1.76,3.62,4.73,4.77,4.5,4.02,3.58,3.55,3.13,3.2,2.98,4.11],"prot_i":["1300098","1313367","1323470","1332870","1343830","1360046","1375836","1389177","1399867","1411727","1421805","1431911","1442989","1454779","1465260","1475834","1487528","1503849","1518983","1533328","1544015","1555511","1566959","1576257"],"prot_c":["1300105","1313370","1323465","1332874","1343840","1360045","1375837","1389176","1399936","1411747","1421806","1431923","1442996","1454787","1465257","1475839","1487527","1503844","1518964","1533324","1544026","1555506","1566961","1576259"],"rec_px":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"ONCO3","nome":"Oncoclínicas","b3":"ONCO3","setor":"Saúde","kpi":{"ltm_v":0,"ltm_q":0,"ltm_v_est":0,"ltm_px":null,"ltm_faltas":[],"prev_v":0,"prev_faltas":[],"sem_ctrl":true,"sem_adm":false,"fech":1.01,"fech_mes":"2026-09","acoes_total":1135097787,"acoes_circ":1126370784.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.0,"mcap":1137634491.84,"yield":0.0,"tes":8727003.0,"tes_mes":"2026-09","tes_pct":0.00768832703221542,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":1.1928975447436145,"mes_ant_v":0,"mes_media":0.0,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":8727003.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"rec_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_cq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,214805,7491077,0,0,0,0,0,0,0,253800],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,102000,2577797,0,0,0,0,0,0,0,253800],"adm_vv_e":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,214805,0,0,0,0,0,0,0,0,0],"tes":[18963632,18963632,18963632,18963632,18963632,18963632,18963632,18186319,18186319,18225231,14727103,14727103,14727103,14727103,14727103,14727103,14727103,14727103,14727103,12552103,12479603,11938753,8727003,8727003],"vwap":[4.6328,3.1522,2.676,2.1888,3.2838,5.4796,5.558,5.0878,4.7237,5.2894,3.8837,3.0236,2.735,1.8803,2.4004,2.5936,2.6597,1.845,1.5066,1.3873,1.2907,0.8616,1.2448,1.1929],"fech":[4.6,2.18,2.34,2.13,5.62,6.07,6.05,5.04,5.13,5.45,2.7,3.32,2.17,1.84,2.71,2.38,2.65,1.54,1.63,1.34,1.23,0.55,1.26,1.01],"lo":[4.37,1.93,1.99,2.0,1.74,4.91,4.44,4.38,4.31,4.63,2.7,2.55,1.98,1.61,1.77,2.11,2.29,1.15,1.09,0.99,1.05,0.54,0.53,0.92],"hi":[5.17,4.64,3.34,2.6,6.1,6.5,6.71,6.16,5.35,6.0,5.72,3.51,4.06,2.2,3.07,3.07,3.0,2.65,2.05,1.84,1.52,1.4,2.24,1.52],"prot_i":["1301393","1313030","1323507","1332866","1344755","1360061","1374227","1388449","1399737","1409571","1421126","1430283","1443074","1455532","1465235","1476183","1488044","1504125","1520130","1534708","1544191","1555388","1566433","1576021"],"prot_c":["1301392","1313028","1323510","1332868","1344762","1360066","1374246","1388450","1399739","1409569","1421127","1430281","1443167","1455539","1465240","1476182","1488047","1504126","1520131","1534706","1544187","1555385","1566434","1576276"],"rec_px":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"MATD3","nome":"Mater Dei","b3":"MATD3","setor":"Saúde","kpi":{"ltm_v":13857370.200000001,"ltm_q":2903200.0,"ltm_v_est":0,"ltm_px":4.773136607880959,"ltm_faltas":[],"prev_v":80894572.7,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":5.06,"fech_mes":"2026-09","acoes_total":333548825,"acoes_circ":330115825.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.008794489025177753,"mcap":1670386074.4999998,"yield":0.00829590859954215,"tes":3433000.0,"tes_mes":"2026-09","tes_pct":0.010292346255454506,"mes_v":550320.99,"mes_q":109400.0,"mes_v_est":0,"mes_px":5.030356398537477,"mes_vwap":5.04246877373618,"mes_ant_v":0,"mes_media":1154780.85,"mes_media_n":12,"mes_pct_circ":0.00033139883554506966,"mes_yield":0.0003294573622237175,"mes_tes":3433000.0,"mes_tes_var":109400,"mes_canc_q":0},"s":{"rec_v":[9083353,19416271,16885951,3574231,3904815,4933648,1746624,4642557,2654836,6503407,1499508,6049371,3617140,0,263151,1111978,0,162662,0,2179001,2620324,3352793,0,550321],"rec_q":[2010680,4498600,4353554,1007300,1036100,1322000,428200,990700,580600,1445800,322500,1319200,842600,0,50000,209000,0,30000,0,419500,535100,707600,0,109400],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vv":[0,8180,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,218000,26712,0,347100,526892],"ctrl_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vq":[0,2012,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,40000,5600,0,70000,104200],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vv":[0,0,0,0,0,0,0,4540,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vq":[0,0,0,0,0,0,0,1000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tes":[7345615,4498600,3686100,4693400,5729500,1322000,1750200,2740900,3321500,4767300,5089800,529800,1372400,1372400,1422400,1631400,1631400,1661400,1661400,2080900,2616000,3323600,3323600,3433000],"vwap":[4.419,4.2762,3.919,3.6588,3.8585,3.7162,4.1729,4.6595,4.6181,4.4733,4.6042,4.5811,4.2789,4.511,4.9656,5.4337,5.8193,5.7375,5.7538,5.2896,4.8537,4.7798,4.8916,5.0425],"fech":[4.25,4.13,3.64,3.86,3.7,3.85,4.79,4.74,4.71,4.31,4.5,4.59,4.26,4.8,5.26,5.8,5.96,5.73,5.74,5.13,4.84,4.84,4.9,5.06],"lo":[4.12,3.91,3.52,3.35,3.61,3.48,3.63,4.16,4.33,4.16,4.18,4.42,4.13,4.18,4.4,5.05,5.59,5.3,5.52,4.99,4.66,4.53,4.56,4.82],"hi":[4.76,4.57,4.15,4.06,4.11,4.08,4.84,5.11,4.89,4.76,5.09,4.76,4.56,4.99,5.55,5.83,6.15,6.17,5.97,5.91,5.11,5.11,5.29,5.24],"prot_i":["1300229","1311839","1323589","1333119","1342998","1359352","1375029","1385535","1397027","1429815","1419607","1429818","1438520","1452506","1464656","1473532","1488576","1499813","1515554","1532626","1541654","1554922","1564521","1574503"],"prot_c":["1300234","1311835","1323590","1333113","1342993","1359348","1375027","1386047","1397036","1429831","1419606","1429807","1438518","1452507","1464638","1473529","1488577","1499830","1515555","1532624","1541652","1554924","1566372","1574949"],"rec_px":[4.5176,4.3161,3.8787,3.5483,3.7688,3.732,4.079,4.6861,4.5726,4.4981,4.6496,4.5856,4.2928,null,5.263,5.3205,null,5.4221,null,5.1943,4.8969,4.7383,null,5.0304],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,80894573,75428359,56012088,39389288,36927035,33022220,28251234,26504611,24041055,24006543,20855929,19356421,13857370],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"BLAU3","nome":"Blau","b3":"BLAU3","setor":"Saúde","kpi":{"ltm_v":0,"ltm_q":0,"ltm_v_est":0,"ltm_px":null,"ltm_faltas":[],"prev_v":0,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":10.71,"fech_mes":"2026-09","acoes_total":233212122,"acoes_circ":230984962.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30 (total informado sem a tesouraria; somada de volta)","ltm_pct_circ":0.0,"mcap":2473848943.02,"yield":0.0,"tes":2227160.0,"tes_mes":"2026-09","tes_pct":0.009549932400169147,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":10.079697843679487,"mes_ant_v":0,"mes_media":0.0,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":2227160.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"rec_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5250],"adm_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,500],"adm_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tes":[2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2227160,2231746,2227160,2227160,2227160,2227160,2227160,2227160,2227160],"vwap":[10.7083,12.0147,10.3305,9.6228,9.5121,9.7787,9.8996,10.5103,10.6755,9.8268,9.4939,10.5616,9.9267,9.696,10.1378,9.7687,10.4623,10.1455,10.8563,10.6273,10.0755,9.2887,8.9417,10.0797],"fech":[11.5385,10.3,10.1154,9.9769,9.5538,9.7846,9.9308,10.7692,10.6077,9.5,9.9462,10.6923,10.2923,10.1077,10.8077,10.17,10.9,10.26,10.03,11.39,10.22,8.6,9.28,10.71],"lo":[9.8,9.8385,9.4231,8.8308,8.9385,8.9769,9.3462,9.6538,10.2308,9.2308,9.0923,9.8308,9.3231,9.2462,9.6308,8.72,9.55,9.35,9.87,9.88,9.5,8.35,8.28,9.02],"hi":[11.6846,13.5462,11.3538,10.3231,10.2615,10.6615,10.8154,11.2846,11.3154,10.6385,10.0769,11.0385,10.8308,10.3,10.8846,11.51,11.58,11.07,11.84,11.42,11.39,10.63,9.35,10.96],"prot_i":["1300978","1312109","1322141","1331084","1343755","1358351","1374862","1387735","1398177","1410365","1420057","1429324","1440821","1452860","1464995","1474860","1487181","1502411","1516803","1530270","1541990","1553957","1565100","1576092"],"prot_c":["1300982","1312110","1322144","1331085","1343756","1358352","1374860","1387736","1398178","1410366","1420058","1429325","1440820","1452861","1464996","1474861","1487182","1502413","1516802","1530271","1541991","1553958","1565102","1576098"],"rec_px":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"ODPV3","nome":"Bradsaúde","b3":"SAUD3","setor":"Saúde","kpi":{"ltm_v":0,"ltm_q":0,"ltm_v_est":0,"ltm_px":null,"ltm_faltas":[],"prev_v":24669967.0,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":13.35,"fech_mes":"2026-09","acoes_total":2924199731,"acoes_circ":2923467631.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.0,"mcap":39028292873.85,"yield":0.0,"tes":732100.0,"tes_mes":"2026-09","tes_pct":0.0002503590955976324,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":14.448772977134373,"mes_ant_v":0,"mes_media":0.0,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":732100.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[5256731,2056085,4468855,5056605,0,2807181,5024510,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"rec_q":[498900,204400,417500,481600,0,260000,472100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cv":[0,0,0,0,0,0,159448,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vv":[23653,19576,0,19977,0,0,0,0,0,0,0,0,0,19991,0,0,0,0,0,19783,0,0,0,0],"adm_cq":[0,0,0,0,0,0,15000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vq":[2100,1600,0,1849,0,0,0,0,0,0,0,0,0,1680,0,0,0,0,0,1400,0,0,0,0],"adm_vv_e":[0,19576,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,19783,0,0,0,0],"tes":[5568000,5771900,6188777,6670377,6670377,6930377,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100,732100],"vwap":[10.6404,11.1103,10.7063,10.7692,11.3645,10.7589,10.6159,11.0552,11.2264,11.4589,12.5803,13.2339,13.1803,11.9033,11.464,11.1643,13.9984,13.5832,14.864,13.9511,13.2994,15.007,14.1693,14.4488],"fech":[11.0,10.8,10.86,11.3,10.61,10.44,10.68,11.0,11.72,12.01,13.16,13.24,12.73,11.6,11.2,11.24,14.64,13.43,15.25,13.56,14.38,15.92,13.87,13.35],"lo":[10.14,10.23,10.24,10.3,10.34,10.24,10.25,10.53,10.68,10.95,11.92,12.82,12.73,11.12,10.8,10.39,11.68,12.7,13.47,12.74,12.25,14.08,13.33,12.76],"hi":[11.47,12.47,11.12,11.52,12.04,11.44,10.99,11.49,11.86,12.02,13.26,13.83,13.6,12.93,11.99,12.2,16.57,14.65,16.19,16.17,14.48,16.29,16.09,15.77],"prot_i":["1298218","1311859","1322301","1331336","1344615","1359310","1375450","1388460","1398305","1410248","1421608","1430721","1442852","1452989","1464779","1475200","1485443","1502522","1519115","1530333","1544113","1552573","1565173","1575475"],"prot_c":["1298220","1311858","1322300","1331337","1344619","1359311","1375449","1388462","1398306","1410249","1421610","1430722","1442857","1452988","1464782","1475203","1485445","1502520","1519180","1530335","1544116","1552574","1565174","1575479"],"rec_px":[10.5366,10.0591,10.7038,10.4996,null,10.7968,10.6429,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,24669967,19413236,17357151,12888296,7831691,7831691,5024510,0,0,0,0,0,0],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"HYPE3","nome":"Hypera","b3":"HYPE3","setor":"Saúde","kpi":{"ltm_v":8313216.56,"ltm_q":377000.0,"ltm_v_est":0,"ltm_px":22.050972307692305,"ltm_faltas":[],"prev_v":23075740.0,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":24.48,"fech_mes":"2026-09","acoes_total":704009059,"acoes_circ":703995955.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.0005355144405623751,"mcap":17233820978.4,"yield":0.00048237802692852413,"tes":13104.0,"tes_mes":"2026-09","tes_pct":1.861339684834936e-05,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":23.565230125887528,"mes_ant_v":0,"mes_media":692768.0466666666,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":13104.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[0,0,0,23075740,0,0,0,0,0,0,0,0,0,0,0,0,0,8313217,0,0,0,0,0,0],"rec_q":[0,0,0,1282000,0,0,0,0,0,0,0,0,0,0,0,0,0,377000,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,56746272,233734821,206328580,63535628,2742843,0,0],"ctrl_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2566900,10267400,8853200,3024000,131300,0,0],"ctrl_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cv":[109478,735593,664535,287750,466603,1186,0,0,0,0,0,0,0,0,527800,0,0,0,0,0,0,0,372689,0],"adm_vv":[0,407450,790000,0,141932,0,673200,693367,384380,166140,762180,257840,1998647,713765,0,0,0,287360,0,665909,424267,20210,1346647,1506093],"adm_cq":[5000,36000,36000,15000,24300,60,0,0,0,0,0,0,0,0,20000,0,0,0,0,0,0,0,17000,0],"adm_vq":[0,20000,40000,0,7400,0,30000,30000,14000,6000,33000,11000,79500,28000,0,0,0,13000,0,28500,20000,1000,63000,63940],"tes":[738554,736054,723554,1980554,1851505,1621455,498692,497411,482411,479811,479811,479811,479811,479811,467311,442311,333046,507090,16804,16804,16804,13104,13104,13104],"vwap":[25.7117,21.0262,18.5238,18.2048,19.2539,19.8493,21.1801,24.1882,27.2258,26.9723,23.8461,23.4618,22.8021,25.5931,24.4477,24.1103,23.6997,22.1733,23.1463,23.1352,20.9102,20.7822,21.4076,23.5652],"fech":[22.1,19.52,18.09,18.28,19.05,19.37,24.12,25.4,27.19,25.71,24.4,22.73,25.84,26.8,23.56,25.21,23.08,23.28,22.53,21.91,20.81,21.27,21.7,24.48],"lo":[21.21,19.17,16.62,17.61,18.09,18.32,19.06,22.42,25.02,25.2,22.36,22.59,20.66,24.45,22.02,22.69,22.79,21.23,22.01,21.82,19.88,19.9,20.39,21.69],"hi":[28.59,23.15,20.05,19.02,20.7,21.06,24.44,26.25,28.87,28.35,26.4,24.7,25.92,27.04,27.79,26.36,26.17,23.69,24.35,23.8,22.24,22.2,22.33,25.11],"prot_i":["1301787","1313784","1324027","1332772","1344598","1360299","1375268","1389104","1400045","1410786","1422369","1431937","1443018","1455521","1465848","1476234","1488293","1504025","1518869","1532752","1543991","1555205","1566920","1576220"],"prot_c":["1301788","1313774","1324023","1332774","1344597","1360295","1389092","1390634","1400041","1410785","1422382","1431934","1443022","1455513","1465844","1476235","1488300","1504024","1519771","1532751","1543992","1555202","1566922","1576233"],"rec_px":[null,null,null,17.9998,null,null,null,null,null,null,null,null,null,null,null,null,null,22.051,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,23075740,23075740,23075740,23075740,0,0,8313217,8313217,8313217,8313217,8313217,8313217,8313217],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"QUAL3","nome":"Qualicorp","b3":"QUAL3","setor":"Saúde","kpi":{"ltm_v":5212307.0,"ltm_q":2500000.0,"ltm_v_est":0,"ltm_px":2.0849228,"ltm_faltas":[],"prev_v":0,"prev_faltas":[],"sem_ctrl":true,"sem_adm":false,"fech":1.66,"fech_mes":"2026-09","acoes_total":284014325,"acoes_circ":282000197.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.008865242033855742,"mcap":468120327.02,"yield":0.011134545327653138,"tes":2014128.0,"tes_mes":"2026-09","tes_pct":0.007091642296563738,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":1.5673274597087439,"mes_ant_v":0,"mes_media":434358.9166666667,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":2014128.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5212307,0,0,0,0,0,0,0],"rec_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2500000,0,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_cq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vv":[0,0,0,0,0,0,0,0,256766,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vq":[0,0,0,0,0,0,0,0,141100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tes":[2690749,2690749,2690749,2690749,2690749,2690749,2690749,2690749,1326867,891867,891867,891867,891867,891867,891867,891867,3386123,3386123,3385406,3385406,2014128,2014128,2014128,2014128],"vwap":[2.1719,2.3614,1.9584,1.6316,1.8935,1.8096,2.002,2.1361,1.9704,1.73,1.7856,2.2222,2.4454,2.3442,2.293,2.2876,2.2636,1.9478,2.0217,1.8162,1.6582,1.5548,1.5975,1.5673],"fech":[2.27,2.15,1.52,1.94,1.78,1.84,2.06,2.13,1.89,1.63,1.87,2.53,2.71,2.24,2.28,2.27,2.15,2.12,1.79,1.72,1.86,1.53,1.54,1.66],"lo":[1.97,2.06,1.5,1.45,1.63,1.67,1.7,1.92,1.74,1.58,1.61,1.86,2.14,2.05,2.11,2.14,1.83,1.75,1.71,1.61,1.49,1.37,1.43,1.44],"hi":[2.46,2.75,2.45,1.99,2.18,2.0,2.29,2.33,2.25,1.9,1.96,2.58,2.82,2.72,2.59,2.43,2.64,2.14,2.42,1.97,1.94,1.89,1.73,1.74],"prot_i":["1299203","1311209","1322897","1331201","1343901","1358403","1373286","1387397","1399823","1408909","1419780","1429840","1440818","1453108","1464798","1473164","1501488","1501499","1528049","1532550","1541683","1555071","1565180","1574846"],"prot_c":["1299205","1311211","1322898","1331200","1343904","1358405","1373287","1387399","1399829","1408911","1419784","1429841","1440819","1453109","1464802","1473165","1487554","1501498","1518969","1532558","1541684","1555072","1565183","1574849"],"rec_px":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,2.0849,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,5212307,5212307,5212307,5212307,5212307,5212307,5212307,5212307],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"COGN3","nome":"Cogna","b3":"COGN3","setor":"Educação","kpi":{"ltm_v":0,"ltm_q":0,"ltm_v_est":0,"ltm_px":null,"ltm_faltas":[],"prev_v":84277285.1,"prev_faltas":[],"sem_ctrl":true,"sem_adm":false,"fech":2.32,"fech_mes":"2026-09","acoes_total":2064266831,"acoes_circ":2004484745.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.0,"mcap":4650404608.4,"yield":0.0,"tes":59782086.0,"tes_mes":"2026-09","tes_pct":0.028960444988131478,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":2.3116856760284406,"mes_ant_v":0,"mes_media":0.0,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":59782086.0,"mes_tes_var":-263207,"mes_canc_q":0},"s":{"rec_v":[0,0,30573669,12412722,41290894,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"rec_q":[0,0,31896040,12341770,27384610,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_cq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"adm_cv":[0,0,0,369000,1198999,0,104000,0,0,0,0,0,0,0,0,0,0,3958000,0,248002,0,0,0,0],"adm_vv":[0,0,0,0,0,0,0,58633547,0,0,0,3114617,1390399,1470683,5840252,2017889,1071000,0,2313639,1037000,484000,0,20436,19804],"adm_cq":[0,0,0,330000,770000,0,55000,0,0,0,0,0,0,0,0,0,0,1300000,0,100001,0,0,0,0],"adm_vq":[0,0,0,0,0,0,0,21477074,0,0,0,1133730,446690,446107,1687362,456296,300000,0,705950,400000,200000,0,8924,8150],"tes":[3595316,3595316,35491356,47782882,75155384,75155384,72301341,70411045,68896093,68678656,68678656,68678656,68678656,68678656,68678656,68678656,68699477,68678656,66646229,63990984,63037639,62330636,60045293,59782086],"vwap":[1.2363,1.2755,1.0458,1.1523,1.4434,1.6387,2.0783,2.6437,2.6453,2.4662,2.6215,2.8052,2.9616,3.3271,3.362,3.9799,3.7985,3.0646,3.1211,2.6357,2.3582,2.2342,2.1749,2.3117],"fech":[1.2818,1.1727,0.9909,1.2818,1.3818,1.9,2.3455,2.7,2.5545,2.5091,2.6545,3.0364,3.4,3.5455,3.16,4.55,3.5,3.16,2.78,2.5,2.25,2.28,2.3,2.32],"lo":[1.1091,1.1364,0.8909,0.9727,1.2182,1.3545,1.7545,2.3182,2.4545,2.2636,2.4091,2.5727,2.6182,3.0545,3.09,3.08,3.42,2.72,2.71,2.4,2.21,2.06,1.99,2.08],"hi":[1.3818,1.4091,1.2273,1.2909,1.6364,1.9545,2.4182,2.9,2.8727,2.7,2.8818,3.0545,3.4545,3.5909,3.6909,4.75,4.6,3.5,3.4,2.92,2.52,2.44,2.39,2.52],"prot_i":["1298324","1311234","1326877","1331881","1344889","1359695","1375287","1387683","1399456","1410401","1420273","1432127","1443024","1455528","1471129","1475912","1488488","1503404","1518329","1533477","1541849","1555214","1565306","1575598"],"prot_c":["1298325","1311236","1323433","1331879","1344892","1359703","1375286","1387967","1399464","1442977","1420277","1432128","1443021","1455534","1471132","1475918","1488489","1503405","1518328","1533478","1541855","1555220","1565303","1575605"],"rec_px":[null,null,0.9585,1.0057,1.5078,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,84277285,84277285,84277285,53703616,41290894,0,0,0,0,0,0,0,0],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"YDUQ3","nome":"Yduqs","b3":"YDUQ3","setor":"Educação","kpi":{"ltm_v":99945611.0,"ltm_q":9508800.0,"ltm_v_est":0,"ltm_px":10.510854261315833,"ltm_faltas":[],"prev_v":218758513.04,"prev_faltas":[],"sem_ctrl":true,"sem_adm":false,"fech":11.14,"fech_mes":"2026-09","acoes_total":274089000,"acoes_circ":254457475.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30 (em milhares no ITR)","ltm_pct_circ":0.037368915965231515,"mcap":2834656271.5,"yield":0.0352584586727026,"tes":19631525.0,"tes_mes":"2026-09","tes_pct":0.07162463652317314,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":10.377218316829927,"mes_ant_v":0,"mes_media":8328800.916666667,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":19631525.0,"mes_tes_var":-1877,"mes_canc_q":0},"s":{"rec_v":[49573464,0,15374134,79768335,74042581,0,0,0,0,0,0,0,0,0,0,0,0,19091808,19438782,58555706,2859315,0,0,0],"rec_q":[4919900,0,1855900,8863600,6761700,0,0,0,0,0,0,0,0,0,0,0,0,1717900,1650800,5837600,302500,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_cq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,136800,0,125000,0,0,0,0,0,190000,0,0,0,0],"adm_vv":[0,0,0,0,0,0,0,0,174250,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,10000,0,10000,0,0,0,0,0,20000,0,0,0,0],"adm_vq":[0,0,0,0,0,0,0,0,10000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tes":[29703891,9515244,11371144,20234744,26996444,11996444,11233746,11233746,11233746,11074108,11074108,10621193,10621045,10621045,10534745,10534745,10534745,12252645,13903445,19339894,19640081,19633402,19633402,19631525],"vwap":[10.2629,10.2215,8.598,9.0048,10.9721,11.6814,13.6326,15.1995,16.8801,13.8678,13.0472,13.5242,12.4835,13.2103,12.8603,13.3195,13.5764,11.1238,11.2603,9.9816,8.7239,8.2585,7.9935,10.3772],"fech":[10.61,9.25,8.55,10.25,10.4,11.54,14.29,15.85,16.49,12.94,13.15,12.92,14.21,13.61,12.17,14.67,13.27,12.11,9.86,9.54,8.88,8.26,8.73,11.14],"lo":[8.93,8.85,7.85,7.95,9.67,10.09,11.5,13.71,15.75,12.23,12.15,12.39,11.24,12.12,11.86,11.63,12.42,9.47,9.6,9.25,7.85,7.41,7.02,8.62],"hi":[11.32,11.2,9.63,10.5,12.4,12.75,15.1,16.35,17.8,16.79,13.78,14.38,14.24,14.47,14.7,15.29,14.92,13.24,12.67,11.14,9.64,9.19,9.09,11.64],"prot_i":["1301309","1313785","1324086","1332990","1345179","1359712","1375792","1388578","1400003","1410749","1421781","1431897","1442842","1454820","1465890","1475251","1487497","1503144","1519928","1532094","1544006","1555346","1566282","1576216"],"prot_c":["1301345","1313811","1324079","1332993","1345180","1359713","1375793","1388587","1400005","1410753","1421784","1431905","1442847","1454821","1465892","1475253","1487500","1503145","1519932","1532095","1544019","1555353","1566295","1576215"],"rec_px":[10.0761,null,8.2839,8.9995,10.9503,null,null,null,null,null,null,null,null,null,null,null,null,11.1135,11.7754,10.0308,9.4523,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,218758513,169185049,169185049,153810915,74042581,0,19091808,38530590,97086296,99945611,99945611,99945611,99945611],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"ANIM3","nome":"Ânima","b3":"ANIM3","setor":"Educação","kpi":{"ltm_v":0,"ltm_q":0,"ltm_v_est":0,"ltm_px":null,"ltm_faltas":[],"prev_v":0,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":2.99,"fech_mes":"2026-09","acoes_total":403868805,"acoes_circ":377881505.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.0,"mcap":1129865699.95,"yield":0.0,"tes":25987300.0,"tes_mes":"2026-09","tes_pct":0.06434589569253807,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":2.912938168796839,"mes_ant_v":0,"mes_media":0.0,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":25987300.0,"mes_tes_var":-21300,"mes_canc_q":0},"s":{"rec_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"rec_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,0,972100,0,0,0,0,194838,0,0,0,0,0,0,0,0,0,0,0,0,0,113145943,62675980,16046396],"ctrl_vv":[0,0,0,19900,0,0,0,0,149160,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cq":[0,0,600000,0,0,0,0,48200,0,0,0,0,0,0,0,0,0,0,0,0,0,55141900,24889300,5580737],"ctrl_vq":[0,0,0,10000,0,0,0,0,33900,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cv":[0,0,0,0,0,0,0,359790,0,0,0,0,0,0,0,0,0,0,0,0,0,585000,0,0],"adm_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,89500,0,0,0,0,0,0,0,0,0,0,0,0,0,300000,0,0],"adm_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tes":[26165763,26165763,26165763,26165763,26165763,26165763,26165763,26165763,26165763,26008863,26008863,26008863,26008863,26008863,26008863,26008863,26008863,26008863,26008600,26008600,26008600,26008600,26008600,25987300],"vwap":[2.4417,2.3693,1.8573,1.7342,2.0012,2.164,2.6677,3.8796,4.1672,3.8506,3.3963,3.4706,3.1703,3.5606,3.5253,4.3516,4.9228,4.257,4.3305,3.5635,2.843,2.1735,2.3231,2.9129],"fech":[2.55,2.14,1.58,2.06,1.69,2.3,3.19,4.25,4.24,3.64,3.37,3.43,3.53,3.83,3.31,5.23,5.13,4.3,3.97,3.3,2.63,2.18,2.81,2.99],"lo":[2.21,1.96,1.54,1.48,1.65,1.66,2.11,3.1,3.82,3.47,2.9,3.18,2.91,3.25,3.22,3.23,4.54,3.71,3.86,3.09,2.51,1.92,1.98,2.69],"hi":[2.71,2.83,2.23,2.14,2.41,2.64,3.32,4.48,4.5,4.52,4.09,3.78,3.53,3.98,4.05,5.39,5.26,4.95,4.8,4.28,3.32,2.92,2.86,3.07],"prot_i":["1302179","1313193","1323553","1333618","1344905","1359813","1376543","1389228","1398112","1411508","1420774","1431671","1443006","1454134","1466476","1475102","1487499","1503163","1518826","1533352","1543282","1555242","1566950","1576198"],"prot_c":["1302180","1313191","1323554","1333620","1344907","1359811","1376544","1389225","1398113","1411509","1420777","1431673","1443003","1454133","1466474","1475096","1487498","1503168","1518828","1533351","1543281","1555243","1567053","1576207"],"rec_px":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"VIVT3","nome":"Telefônica Brasil / Vivo","b3":"VIVT3","setor":"Telecom","kpi":{"ltm_v":319998819.0,"ltm_q":9358300.0,"ltm_v_est":0,"ltm_px":34.19411848305782,"ltm_faltas":[],"prev_v":1734013108.6799998,"prev_faltas":[],"sem_ctrl":true,"sem_adm":false,"fech":29.81,"fech_mes":"2026-09","acoes_total":3226546622,"acoes_circ":3195606352.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.002928489610162097,"mcap":95261025353.12,"yield":0.003359178822753658,"tes":30940270.0,"tes_mes":"2026-09","tes_pct":0.009589283411879364,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":30.392320604834147,"mes_ant_v":0,"mes_media":26666568.25,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":30940270.0,"mes_tes_var":0,"mes_canc_q":0},"s":{"rec_v":[107533283,0,199999068,199998966,77663307,48817359,1416,0,402416230,334110675,335153779,28319026,0,253057523,66941296,0,0,0,0,0,0,0,0,0],"rec_q":[3951600,0,7916200,8145000,3138000,1998600,56,0,13537100,10698400,10039200,844200,0,7410000,1948300,0,0,0,0,0,0,0,0,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vv":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_cq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ctrl_vq":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tes":[43895312,43895312,7922184,16067184,19205184,21203784,21203840,21203840,34740940,10698570,20737770,21581970,21581970,28991970,30940270,30940270,30940270,30940270,30940270,30940270,30940270,30940270,30940270,30940270],"vwap":[26.9804,25.8894,24.9963,24.5745,25.6874,24.8592,26.3139,27.8666,29.7516,31.3416,33.4196,33.5195,33.1214,34.1477,33.4565,34.6953,40.7736,41.087,40.8444,35.8583,33.6437,34.4949,30.2006,30.3923],"fech":[26.32,24.76,23.385,25.935,24.17,24.915,27.79,28.66,30.89,31.48,33.87,34.07,32.04,35.43,33.1,37.38,43.18,41.23,39.25,33.82,33.95,32.63,29.85,29.81],"lo":[25.94,24.355,23.305,23.165,23.85,23.77,24.63,27.06,28.36,30.16,31.24,32.74,31.68,31.78,32.12,32.21,37.24,39.23,38.0,33.04,32.2,32.1,28.99,29.36],"hi":[28.36,27.365,26.395,26.375,27.125,25.85,27.88,28.89,31.51,32.77,35.1,34.39,35.08,35.57,35.47,38.09,43.47,43.12,43.21,40.44,35.04,36.5,33.01,31.29],"prot_i":["1297623","1312693","1323365","1331759","1344876","1359888","1375751","1388238","1399535","1410235","1421889","1431430","1441819","1454465","1465641","1475476","1487933","1503224","1518780","1532503","1543091","1554845","1566662","1576071"],"prot_c":["1297622","1312698","1323368","1331758","1344878","1359886","1375760","1388249","1465628","1410237","1421888","1431431","1441824","1454468","1465640","1475477","1487926","1503226","1532549","1532613","1543092","1554877","1576067","1576069"],"rec_px":[27.2126,null,25.2645,24.5548,24.7493,24.4258,25.28,null,29.7269,31.23,33.3845,33.5454,null,34.1508,34.3588,null,null,null,null,null,null,null,null,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,1734013109,1626479826,1879537349,1746479577,1546480611,1468817304,1419999945,1419998529,1419998529,1017582299,683471624,348317845,319998819],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}},{"id":"TIMS3","nome":"TIM","b3":"TIMS3","setor":"Telecom","kpi":{"ltm_v":631127277.21,"ltm_q":29656573.0,"ltm_v_est":0,"ltm_px":21.281193791676472,"ltm_faltas":[],"prev_v":368751945.37,"prev_faltas":[],"sem_ctrl":false,"sem_adm":false,"fech":18.33,"fech_mes":"2026-09","acoes_total":2378925889.0,"acoes_circ":2376775554.0,"acoes_data":"2026-06-30","acoes_fonte":"ITR 2026-06-30","ltm_pct_circ":0.012477649793262725,"mcap":43566295904.82,"yield":0.014486594834429673,"tes":2150335.0,"tes_mes":"2026-09","tes_pct":0.0009039100418987454,"mes_v":0,"mes_q":0,"mes_v_est":0,"mes_px":null,"mes_vwap":19.04015853064515,"mes_ant_v":251999638.87,"mes_media":52593939.767500006,"mes_media_n":12,"mes_pct_circ":0.0,"mes_yield":0.0,"mes_tes":2150335.0,"mes_tes_var":-13200000,"mes_canc_q":13200000.0},"s":{"rec_v":[0,0,0,0,5029501,7984888,34865179,0,0,10776324,149681328,160414725,152472660,73536019,153118959,0,0,0,0,0,0,0,251999639,0],"rec_q":[0,0,0,0,305400,493400,2103900,0,0,525700,6761500,7051200,6680000,2958400,6614267,0,0,0,0,0,0,0,13403906,0],"tv_v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tv_q":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ctrl_vq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_cv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vv":[756947,0,0,0,173500,102540,10166022,11255839,2505093,5440462,1276452,0,0,0,0,0,10706408,604606,0,0,782000,0,0,0],"adm_cq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"adm_vq":[40000,0,0,0,10000,6000,592296,569200,119800,266600,57022,0,0,0,0,0,390258,22368,0,0,35000,0,0,0],"tes":[201320,201320,201320,201320,506720,1000120,3104020,3104020,3104020,2860855,8832209,15883409,22563409,25521809,3457567,3457567,3457567,3457567,3457567,3457567,3457567,3456692,15350335,2150335],"vwap":[17.394,16.232,15.366,14.7301,16.7303,17.1932,17.7226,19.5055,20.8062,20.8396,22.2807,22.8499,23.5889,24.7301,22.9212,23.1792,26.931,26.7957,26.6961,23.2755,22.1357,21.4573,18.5838,19.0402],"fech":[16.58,15.84,14.48,15.61,16.17,18.0,18.95,19.49,22.05,20.71,22.75,23.5,24.29,25.33,21.34,24.52,27.9,27.46,25.75,21.9,21.87,19.43,18.61,18.33],"lo":[16.2,15.28,14.27,13.74,15.26,16.11,16.28,18.45,19.38,19.56,20.52,22.15,22.18,23.94,21.28,21.32,24.21,25.4,24.81,21.88,21.07,19.16,17.85,18.33],"hi":[18.86,16.88,16.27,15.92,17.76,18.1,19.15,20.41,22.05,22.79,23.28,23.77,25.39,25.48,25.32,25.44,28.74,27.87,28.27,26.88,22.91,23.17,19.64,19.77],"prot_i":["1301382","1313914","1324091","1333117","1344952","1360405","1375718","1389207","1400018","1410891","1421764","1430959","1442778","1454728","1465794","1476076","1488213","1503986","1519049","1533148","1544022","1555181","1566965","1576226"],"prot_c":["1301383","1313916","1324094","1333118","1344953","1360406","1375717","1389208","1400019","1410895","1421766","1430961","1442784","1454730","1465797","1476077","1488227","1503989","1519051","1533150","1544018","1555187","1566970","1576222"],"rec_px":[null,null,null,null,16.4686,16.1834,16.5717,null,null,20.499,22.1373,22.75,22.8252,24.8567,23.1498,null,null,null,null,null,null,null,18.8005,null],"st":["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"],"roll":[null,null,null,null,null,null,null,null,null,null,null,368751945,521224605,594760624,747879584,747879584,742850083,734865195,700000016,700000016,700000016,689223692,791542003,631127277],"roll_faltas":[null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,0,0,0,0,0,0,0,0,0]}}]};
+  const app = document.getElementById("app");
+  if (!D) {
+    app.textContent = "Sem dados: gere o painel com py build_buybacks_dashboard.py.";
+    return;
+  }
+
+  // ---------------------------------------------------------------- formatos
+  const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const MES_NOME = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  const NF = {};
+  const nf = (d) => NF[d] || (NF[d] = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const mlab = (m) => MES[+m.slice(5, 7) - 1] + "/" + m.slice(2, 4);
+  const mlong = (m) => MES[+m.slice(5, 7) - 1] + " " + m.slice(0, 4);
+  // espaços inseparáveis: o ano não fica sozinho na linha seguinte
+  const mfull = (m) => MES_NOME[+m.slice(5, 7) - 1] + " de " + m.slice(0, 4);
+  // Espaço inseparável entre "R$", número e unidade: no celular, "R$" sozinho no
+  // fim de uma linha e "3,17 bi" na seguinte fica feio e confunde.
+  const NB = " ";
+  function brl(v, opt) {
+    if (v == null) return "—";
+    const a = Math.abs(v), s = v < 0 ? "−" : (opt && opt.sign && v > 0 ? "+" : "");
+    if (a >= 1e9) return s + "R$" + NB + nf(2).format(a / 1e9) + NB + "bi";
+    if (a >= 1e6) return s + "R$" + NB + nf(a >= 1e8 ? 0 : 1).format(a / 1e6) + NB + "mi";
+    if (a >= 1e3) return s + "R$" + NB + nf(0).format(a / 1e3) + NB + "mil";
+    return s + "R$" + NB + nf(0).format(a);
+  }
+  function qtd(v) {
+    if (v == null) return "—";
+    const a = Math.abs(v);
+    if (a >= 1e9) return nf(2).format(v / 1e9) + NB + "bi";
+    if (a >= 1e6) return nf(a >= 1e8 ? 0 : 1).format(v / 1e6) + NB + "mi";
+    if (a >= 1e3) return nf(0).format(v / 1e3) + NB + "mil";
+    return nf(0).format(v);
+  }
+  const pct = (v, d) => v == null ? "—" : nf(d == null ? 1 : d).format(v * 100) + "%";
+  // modo mês: razões de um mês só são pequenas; positivo que arredondaria a zero vira "< 0,01%"
+  const pctMes = (v, d) => v > 0 && v * 100 < Math.pow(10, -d) / 2 ? "< " + nf(d).format(Math.pow(10, -d)) + "%" : pct(v, d);
+  const px = (v) => v == null ? "—" : "R$" + NB + nf(2).format(v);
+  const mi = (v, d) => v == null ? "—" : nf(d == null ? 1 : d).format(v / 1e6);
+  const dataBR = (iso) => iso.slice(8, 10) + "/" + iso.slice(5, 7) + "/" + iso.slice(0, 4);
+
+  // ---------------------------------------------------------------- dados
+  const M = D.meses, N = M.length;
+  const ENT = {};
+  D.entidades.forEach((e) => { ENT[e.id] = e; });
+  const COB = D.entidades[0].id;
+  const EMPRESAS = D.entidades.slice(1);
+  const META = D.meta;
+
+  // per: 1 = modo mês (padrão: o último mês do painel; o botão leva o nome dele e
+  // a escolha guardada continua valendo quando o painel avança um mês), 12 ou 24 meses
+  const state = { id: COB, per: 1, sort: "v" };
+  try {
+    const p = localStorage.getItem("radar-recompras-per");
+    if (p === "1" || p === "12" || p === "24") state.per = +p;
+  } catch (e) { /* armazenamento indisponível: segue com o padrão */ }
+  // "#RDOR3" ou o código B3 exibido ("#SAUD3" -> ODPV3). Hash malformado ("#%")
+  // não pode derrubar a página: decodeURIComponent lança URIError.
+  const B3_ID = {};
+  EMPRESAS.forEach((e) => { if (e.b3) B3_ID[e.b3] = e.id; });
+  function hashId() {
+    let raw = "";
+    try { raw = decodeURIComponent((location.hash || "").slice(1)); } catch (e) { raw = (location.hash || "").slice(1); }
+    const id = raw.toUpperCase();
+    return ENT[id] ? id : (B3_ID[id] || (id === "COBERTURA" ? COB : null));
+  }
+  const h = hashId();
+  if (h) state.id = h;
+
+  // Modo mês: indicadores e ranking só do último mês; gráficos, mapa e tabela
+  // seguem com 12 meses, o mês em foco destacado.
+  const FOCO = N - 1;
+  const modoMes = () => state.per === 1;
+  const ROTULO_MES = MES_NOME[+M[FOCO].slice(5, 7) - 1].replace(/^./, (c) => c.toUpperCase()) + " " + M[FOCO].slice(0, 4);
+  const win = () => [Math.max(N - (state.per === 24 ? 24 : 12), 0), N];
+  const ltmStart = Math.max(N - 12, 0);
+
+  // ---------------------------------------------------------------- svg util
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function txt(parent, x, y, s, cls, anchor) {
+    const t = el("text", { x: x, y: y, class: cls }, parent);
+    if (anchor) t.setAttribute("text-anchor", anchor);
+    t.textContent = s;
+    return t;
+  }
+  // coluna com topo arredondado (4px) e base reta, crescendo do zero
+  function colPath(x, w, y0, y1) {
+    const top = Math.min(y0, y1), bot = Math.max(y0, y1), hgt = bot - top;
+    if (hgt < 0.5) return "";
+    const r = Math.min(4, w / 2, hgt);
+    if (y1 <= y0) // para cima
+      return `M${x},${bot}V${top + r}Q${x},${top} ${x + r},${top}H${x + w - r}Q${x + w},${top} ${x + w},${top + r}V${bot}Z`;
+    return `M${x},${top}V${bot - r}Q${x},${bot} ${x + r},${bot}H${x + w - r}Q${x + w},${bot} ${x + w},${bot - r}V${top}Z`;
+  }
+  function niceMax(v, ticks) {
+    if (!(v > 0)) return { max: 1, step: 0.25 };
+    const raw = v / (ticks || 4);
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    const f = raw / p;
+    const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+    return { max: Math.ceil(v / step) * step, step: step };
+  }
+  function hatch(svg, id) {
+    const defs = el("defs", {}, svg);
+    const p = el("pattern", { id: id, width: 5, height: 5, patternUnits: "userSpaceOnUse", patternTransform: "rotate(135)" }, defs);
+    el("rect", { width: 5, height: 5, fill: "var(--surface)" }, p);
+    el("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: "var(--axis)", "stroke-width": 2 }, p);
+    return "url(#" + id + ")";
+  }
+
+  // ---------------------------------------------------------------- tooltip
+  const tip = document.getElementById("tip");
+  function tipShow(rows, title, warn, ev, anchorEl) {
+    tip.replaceChildren();
+    const t = document.createElement("div"); t.className = "t"; t.textContent = title; tip.appendChild(t);
+    rows.forEach((r) => {
+      const d = document.createElement("div"); d.className = "r";
+      const l = document.createElement("span"); l.className = "l";
+      if (r.c) { const i = document.createElement("i"); i.style.background = r.c; l.appendChild(i); }
+      l.appendChild(document.createTextNode(r.l));
+      const b = document.createElement("b"); b.textContent = r.v;
+      d.appendChild(l); d.appendChild(b); tip.appendChild(d);
+    });
+    if (warn) { const w = document.createElement("div"); w.className = "w"; w.textContent = warn; tip.appendChild(w); }
+    tip.classList.add("on");
+    let x, y;
+    if (ev && ev.clientX != null) { x = ev.clientX; y = ev.clientY; }
+    else { const r = anchorEl.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top; }
+    // clientWidth/Height: área visível sem a barra de rolagem
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    let left = x + 14, top = y - th - 12;
+    if (left + tw > vw - 8) left = x - tw - 14;
+    if (left < 8) left = 8;
+    if (top < 8) top = y + 16;
+    if (top + th > vh - 8) top = Math.max(8, vh - th - 8);
+    tip.style.left = left + "px"; tip.style.top = top + "px";
+  }
+  function tipHide() { tip.classList.remove("on"); }
+  window.addEventListener("scroll", tipHide, { passive: true });
+
+  // Liga hover/teclado de um gráfico indexado por mês (ou por linha).
+  // hits: [{el, i}], show(i, ev, el), count = quantos índices navegáveis.
+  function interactive(plot, count, show) {
+    let cur = null;
+    plot.onkeydown = (ev) => {
+      if (!count) return;
+      if (ev.key === "ArrowRight" || ev.key === "ArrowLeft" || ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+        ev.preventDefault();
+        const step = (ev.key === "ArrowRight" || ev.key === "ArrowDown") ? 1 : -1;
+        cur = cur == null ? (step > 0 ? 0 : count - 1) : Math.min(count - 1, Math.max(0, cur + step));
+        show(cur, null);
+      } else if (ev.key === "Escape") { cur = null; show(null); tipHide(); }
+      else if (ev.key === "Enter" && plot._enter && cur != null) { plot._enter(cur); }
+    };
+    plot.onblur = () => { cur = null; show(null); tipHide(); };
+    plot.onmouseleave = () => { show(null); tipHide(); };
+  }
+
+  // ---------------------------------------------------------------- eixos
+  function frame(plot, height, opts) {
+    plot.replaceChildren();
+    // Solta os handlers do desenho anterior: um gráfico que cai no estado vazio
+    // não chama interactive() e o teclado mostraria a empresa anterior.
+    plot.onkeydown = plot.onblur = plot.onmouseleave = null;
+    plot._enter = null;
+    const W = Math.max(plot.clientWidth, 260);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${height}`, width: W, height: height, role: "img" }, plot);
+    const m = Object.assign({ l: 46, r: 12, t: 16, b: 34 }, opts || {});
+    return { svg: svg, W: W, H: height, m: m, pw: W - m.l - m.r, ph: height - m.t - m.b };
+  }
+  function xAxisMonths(f, idxs, xc) {
+    const slot = f.pw / idxs.length;
+    const every = slot >= 34 ? 1 : slot >= 17 ? 2 : slot >= 11 ? 3 : 6;
+    // Rótulos ancorados no último mês (sempre visível); o ano vai sob o primeiro
+    // rótulo desenhado e sempre que muda — nunca depende de janeiro cair no passo.
+    let ano = null;
+    idxs.forEach((i, k) => {
+      if ((idxs.length - 1 - k) % every !== 0) return;
+      const m = M[i];
+      txt(f.svg, xc(k), f.m.t + f.ph + 16, MES[+m.slice(5, 7) - 1], "xt" + (modoMes() && i === FOCO ? " mfoco" : ""));
+      if (m.slice(0, 4) !== ano) {
+        ano = m.slice(0, 4);
+        txt(f.svg, xc(k), f.m.t + f.ph + 29, ano, "xt yr");
+      }
+    });
+  }
+  // casas decimais que o passo do eixo exige (0,25 -> 2; 0,5 -> 1; 5 -> 0)
+  function stepDec(step) {
+    for (let d = 0; d < 4; d++) if (Math.abs(Math.round(step * Math.pow(10, d)) - step * Math.pow(10, d)) < 1e-6) return d;
+    return 4;
+  }
+  function yGrid(f, y, max, step, fmt, min) {
+    const lo = min || 0, n = Math.round((max - lo) / step);
+    for (let j = 0; j <= n; j++) {
+      const v = lo + j * step;
+      const yy = Math.round(y(v)) + 0.5;
+      el("line", { class: Math.abs(v) < step * 1e-6 ? "base" : "gl", x1: f.m.l, x2: f.m.l + f.pw, y1: yy, y2: yy }, f.svg);
+      txt(f.svg, f.m.l - 8, yy + 3.5, fmt(v, step), "yt");
+    }
+  }
+  // modo mês: item cinza "Meses anteriores" nas legendas fixas dos cartões (sai nos outros modos)
+  function legendaAnt(sel, cls) {
+    const ul = document.querySelector(sel + " .legend"), old = ul.querySelector(".lg-ant");
+    if (old) old.remove();
+    if (!modoMes()) return;
+    const li = document.createElement("li"); li.className = "lg-ant";
+    const s = document.createElement("span"); s.className = cls; s.style.background = "var(--deemph)";
+    li.appendChild(s); li.appendChild(document.createTextNode("Meses anteriores")); ul.appendChild(li);
+  }
+  // modo mês: faixa atrás da fatia do mês em foco (desenhar antes das marcas)
+  function faixaFoco(f, idxs, slot) {
+    const k = modoMes() ? idxs.indexOf(FOCO) : -1;
+    if (k >= 0) el("rect", { class: "faixa-foco", x: f.m.l + slot * k, y: f.m.t, width: slot, height: f.ph }, f.svg);
+  }
+  // Uma área de toque por mês (a fatia inteira, maior que a barra). Também é a
+  // âncora do tooltip no teclado — barra zerada não tem tamanho para ancorar.
+  // pointerdown abre o tooltip num toque no celular (toque parado não gera pointermove).
+  function hitSlots(f, n, slot, show) {
+    const hits = [];
+    for (let k = 0; k < n; k++) {
+      const hit = el("rect", { class: "hit", x: f.m.l + slot * k, y: f.m.t, width: slot, height: f.ph }, f.svg);
+      hit.addEventListener("pointermove", (ev) => show(k, ev));
+      hit.addEventListener("pointerdown", (ev) => show(k, ev));
+      hits.push(hit);
+    }
+    return hits;
+  }
+  const estTxt = (v) => `≈ inclui ${brl(v)} estimado pelo preço médio do dia na B3 (preço não informado no formulário)`;
+  // série toda zerada: só a linha de base, sem inventar escala
+  function baseOnly(f, y) {
+    const yy = Math.round(y(0)) + 0.5;
+    el("line", { class: "base", x1: f.m.l, x2: f.m.l + f.pw, y1: yy, y2: yy }, f.svg);
+    txt(f.svg, f.m.l - 8, yy + 3.5, "0", "yt");
+  }
+  // eixos em R$ milhões (ou milhões de ações): decimais pelo passo do eixo
+  const fmtMi = (v, step) => Math.abs(v) < 1e-9 ? "0" : nf(stepDec((step || v) / 1e6)).format(v / 1e6);
+
+  // ---------------------------------------------------------------- gráficos
+  function chartRec(e) {
+    const plot = document.querySelector("#c-rec .plot");
+    const [a, b] = win(), idxs = []; for (let i = a; i < b; i++) idxs.push(i);
+    const v = e.s.rec_v, f = frame(plot, 268, { l: 46 });
+    const max = Math.max(0, ...idxs.map((i) => v[i] || 0));
+    const nice = niceMax(max, 4);
+    const y = (val) => f.m.t + f.ph - (val / nice.max) * f.ph;
+    if (max > 0) yGrid(f, y, nice.max, nice.step, fmtMi);
+    else baseOnly(f, y);
+    const slot = f.pw / idxs.length, bw = Math.min(24, slot * 0.62);
+    const xc = (k) => f.m.l + slot * k + slot / 2;
+    const pat = hatch(f.svg, "h-rec");
+    faixaFoco(f, idxs, slot);
+    const two = state.per === 24 && a < ltmStart, foco = modoMes();
+    const lg = document.getElementById("lg-rec"); lg.replaceChildren();
+    if (two || foco) {
+      (two ? [["var(--s1)", "Últimos 12 meses"], ["var(--deemph)", "12 meses anteriores"]]
+        : [["var(--s1)", ROTULO_MES], ["var(--deemph)", "Meses anteriores"]]).forEach(([c, l]) => {
+        const li = document.createElement("li"); const s = document.createElement("span"); s.className = "bd"; s.style.background = c;
+        li.appendChild(s); li.appendChild(document.createTextNode(l)); lg.appendChild(li);
+      });
+    }
+    if (idxs.some((i) => v[i] == null)) {
+      const li = document.createElement("li"); const s = document.createElement("span"); s.className = "ht";
+      li.appendChild(s); li.appendChild(document.createTextNode("Sem formulário")); lg.appendChild(li);
+    }
+    const marks = [];
+    idxs.forEach((i, k) => {
+      const x = xc(k) - bw / 2;
+      let mk;
+      if (v[i] == null) mk = el("rect", { class: "mk", x: x, y: f.m.t + f.ph - 14, width: bw, height: 14, rx: 3, fill: pat }, f.svg);
+      else mk = el("path", { class: "mk", d: colPath(x, bw, y(0), y(v[i])), fill: (two && i < ltmStart) || (foco && i !== FOCO) ? "var(--deemph)" : "var(--s1)" }, f.svg);
+      marks.push(mk);
+    });
+    // rótulos seletivos: maior valor e último mês
+    const vals = idxs.map((i) => v[i] || 0);
+    const kMax = vals.indexOf(Math.max(...vals)), kLast = idxs.length - 1;
+    new Set([kMax, kLast]).forEach((k) => {
+      const val = v[idxs[k]];
+      if (!val) return;
+      txt(f.svg, xc(k), y(val) - 6, nf(val >= 1e8 ? 0 : 1).format(val / 1e6), "vl");
+    });
+    if (max === 0) txt(f.svg, f.m.l + f.pw / 2, f.m.t + f.ph / 2, "Sem recompra no período", "vl sub");
+    xAxisMonths(f, idxs, xc);
+    let hits = [];
+    const show = (k, ev) => {
+      marks.forEach((mk, j) => mk.classList.toggle("dim", k != null && j !== k));
+      f.svg.classList.toggle("on", k != null);
+      if (k == null) return tipHide();
+      const i = idxs[k];
+      if (v[i] == null) return tipShow([], mlong(M[i]), e.s.st ? stTxt(e.s.st[i], M[i]) : "Sem dado", ev, hits[k]);
+      const rows = [{ l: "Recompra", v: brl(v[i]), c: "var(--s1)" }];
+      if (e.s.rec_q) { rows.push({ l: "Ações", v: qtd(e.s.rec_q[i]) }); rows.push({ l: "Preço médio", v: px(e.s.rec_px[i]) }); }
+      if (e.s.tv_v && e.s.tv_v[i]) rows.push({ l: "Venda de tesouraria", v: brl(e.s.tv_v[i]) });
+      const notas = [];
+      if (e.s.faltas && e.s.faltas[i]) notas.push(`${e.s.faltas[i]} empresa(s) sem formulário neste mês`);
+      if (e.s.rec_v_e && e.s.rec_v_e[i]) notas.push(estTxt(e.s.rec_v_e[i]));
+      tipShow(rows, mlong(M[i]), notas.join(" · ") || null, ev, hits[k]);
+    };
+    hits = hitSlots(f, idxs.length, slot, show);
+    interactive(plot, idxs.length, show);
+    f.svg.setAttribute("aria-label", `Recompra mensal, ${mlab(M[a])} a ${mlab(M[b - 1])}.` +
+      (foco ? ` Em destaque, ${mlab(M[FOCO])}: ${v[FOCO] == null ? "sem dado" : brl(v[FOCO])}.` : "") +
+      ` Maior mês: ${mlab(M[idxs[kMax]])}, ${brl(vals[kMax])}.`);
+  }
+
+  function lineChart(sel, opts) {
+    // opts: idxs, series: [{vals, color, area, dots, label}], band:[lo,hi], fmtY, fmtTip(k), height, aria
+    const plot = document.querySelector(sel + " .plot");
+    const f = frame(plot, opts.height || 230, { l: opts.left || 46 });
+    const idxs = opts.idxs;
+    const all = [];
+    opts.series.forEach((s) => idxs.forEach((i) => { if (s.vals[i] != null) all.push(s.vals[i]); }));
+    if (opts.band) idxs.forEach((i) => { if (opts.band[1][i] != null) all.push(opts.band[1][i]); if (opts.band[0][i] != null) all.push(opts.band[0][i]); });
+    if (!all.length) { plot.replaceChildren(); const p = document.createElement("p"); p.className = "empty"; p.textContent = opts.empty || "Sem dados no período"; plot.appendChild(p); return; }
+    let lo = Math.min(...all), hi = Math.max(...all), ymin, ymax, step;
+    if (opts.zero) {
+      const nice = niceMax(hi, 4); ymin = 0; ymax = nice.max; step = nice.step;
+    } else {
+      // preço: eixo justo nos dados (com folga), sem forçar o zero
+      const pad = (hi - lo) * 0.12 || hi * 0.1 || 1;
+      lo = Math.max(0, lo - pad); hi = hi + pad;
+      step = niceMax(hi - lo, 4).step; ymin = Math.floor(lo / step) * step; ymax = Math.ceil(hi / step) * step;
+    }
+    const y = (v) => f.m.t + f.ph - ((v - ymin) / (ymax - ymin || 1)) * f.ph;
+    if (opts.zero && hi === 0) baseOnly(f, y);
+    else yGrid(f, y, ymax, step, opts.fmtY, ymin);
+    const slot = f.pw / idxs.length;
+    const xc = (k) => f.m.l + slot * k + slot / 2;
+    // com área preenchida a faixa sairia em dois tons (a área acaba no meio da
+    // fatia): aí o destaque fica no rótulo em negrito e no ponto final
+    if (!opts.series.some((s) => s.area)) faixaFoco(f, idxs, slot);
+    if (opts.band) {
+      let d = "", d2 = "";
+      const pts = idxs.map((i, k) => [k, opts.band[0][i], opts.band[1][i]]).filter((p) => p[1] != null && p[2] != null);
+      pts.forEach((p, j) => { d += (j ? "L" : "M") + xc(p[0]) + "," + y(p[2]); });
+      for (let j = pts.length - 1; j >= 0; j--) d2 += "L" + xc(pts[j][0]) + "," + y(pts[j][1]);
+      if (pts.length) el("path", { d: d + d2 + "Z", fill: "var(--band-mkt)", stroke: "none" }, f.svg);
+    }
+    const dotsEls = [];
+    opts.series.forEach((s) => {
+      // segmentos contínuos (mês sem dado interrompe a linha)
+      let seg = [];
+      const segs = [];
+      idxs.forEach((i, k) => { if (s.vals[i] == null) { if (seg.length) segs.push(seg); seg = []; } else seg.push([xc(k), y(s.vals[i]), k]); });
+      if (seg.length) segs.push(seg);
+      if (s.line !== false) segs.forEach((sg) => {
+        if (s.area && sg.length > 1) el("path", { d: "M" + sg.map((p) => p[0] + "," + p[1]).join("L") + `L${sg[sg.length - 1][0]},${y(ymin)}L${sg[0][0]},${y(ymin)}Z`, fill: s.color, opacity: 0.1 }, f.svg);
+        if (sg.length > 1) el("path", { d: "M" + sg.map((p) => p[0] + "," + p[1]).join("L"), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, f.svg);
+      });
+      if (s.dots) idxs.forEach((i, k) => {
+        if (s.vals[i] == null) return;
+        const hollow = s.hollow && s.hollow(i);
+        const c = s.dim && s.dim(i) ? "var(--deemph)" : s.color;
+        dotsEls.push(el("circle", { cx: xc(k), cy: y(s.vals[i]), r: 4.5, fill: hollow ? "var(--surface)" : c, stroke: hollow ? c : "var(--surface)", "stroke-width": 2 }, f.svg));
+      });
+      if (s.endLabel) {
+        const last = segs.length ? segs[segs.length - 1] : null;
+        if (last) {
+          const p = last[last.length - 1];
+          el("circle", { cx: p[0], cy: p[1], r: 4.5, fill: s.color, stroke: "var(--surface)", "stroke-width": 2 }, f.svg);
+          const t = txt(f.svg, p[0] - 8, p[1] - 10, s.endLabel(idxs[p[2]]), "vl end");
+          if (p[1] - 10 < f.m.t + 8) t.setAttribute("y", p[1] + 18);
+        }
+      }
+    });
+    xAxisMonths(f, idxs, xc);
+    const xh = el("line", { class: "xh", x1: 0, x2: 0, y1: f.m.t, y2: f.m.t + f.ph }, f.svg);
+    const hit = el("rect", { class: "hit", x: f.m.l, y: f.m.t, width: f.pw, height: f.ph }, f.svg);
+    const show = (k, ev) => {
+      if (k == null) { xh.classList.remove("show"); return tipHide(); }
+      const x = xc(k); xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.classList.add("show");
+      const t = opts.tip(idxs[k]);
+      tipShow(t.rows, t.title, t.warn, ev, xh);
+    };
+    const onPointer = (ev) => {
+      const r = f.svg.getBoundingClientRect();
+      const sx = (ev.clientX - r.left) * (f.W / r.width);
+      const k = Math.max(0, Math.min(idxs.length - 1, Math.floor((sx - f.m.l) / slot)));
+      show(k, ev);
+    };
+    hit.addEventListener("pointermove", onPointer);
+    hit.addEventListener("pointerdown", onPointer);  // toque no celular
+    interactive(plot, idxs.length, show);
+    f.svg.setAttribute("aria-label", opts.aria + (modoMes() && idxs.includes(FOCO) ? ` Em destaque, ${mlab(M[FOCO])}.` : ""));
+  }
+
+  function chartRoll(e) {
+    const [a, b] = win();
+    const idxs = []; for (let i = Math.max(a, 11); i < b; i++) idxs.push(i);
+    const r = e.s.roll, rf = e.s.roll_faltas;
+    lineChart("#c-roll", {
+      idxs: idxs, zero: true, height: 230,
+      series: [{ vals: r, color: "var(--s1)", area: true, dots: false,
+        endLabel: (i) => brl(r[i]) }],
+      fmtY: fmtMi,
+      empty: "São necessários 12 meses de histórico",
+      tip: (i) => ({ title: "12 meses até " + mlong(M[i]), rows: [{ l: "Recompra acumulada", v: brl(r[i]), c: "var(--s1)" }],
+        warn: !rf[i] ? null : e.id === COB
+          ? `Faltam ${rf[i]} formulário(s) de empresa-mês nesta janela — fora da soma`
+          : `Inclui ${rf[i]} mês(es) sem formulário — fora da soma` }),
+      aria: `Recompra acumulada em 12 meses; último valor ${brl(r[b - 1])} em ${mlab(M[b - 1])}.`,
+    });
+  }
+
+  function chartPx(e) {
+    const [a, b] = win(), idxs = []; for (let i = a; i < b; i++) idxs.push(i);
+    const s = e.s;
+    legendaAnt("#c-px", "dt");
+    lineChart("#c-px", {
+      idxs: idxs, height: 230, left: 46,
+      band: s.lo && s.hi ? [s.lo, s.hi] : null,
+      series: [
+        { vals: s.vwap, color: "var(--line-mkt)" },
+        { vals: s.rec_px, color: "var(--s1)", line: false, dots: true, dim: (i) => modoMes() && i !== FOCO },
+      ],
+      fmtY: (v, step) => nf(stepDec(step)).format(v),
+      empty: "Sem cotação no período",
+      tip: (i) => {
+        const rows = [{ l: "VWAP do mês", v: px(s.vwap[i]), c: "var(--line-mkt)" }];
+        if (s.lo && s.lo[i] != null) rows.push({ l: "Mínima–máxima", v: px(s.lo[i]) + " – " + px(s.hi[i]) });
+        if (s.rec_px[i] != null) {
+          rows.push({ l: "Preço da recompra", v: px(s.rec_px[i]), c: "var(--s1)" });
+          if (s.vwap[i]) rows.push({ l: "Diferença", v: (s.rec_px[i] >= s.vwap[i] ? "+" : "−") + pct(Math.abs(s.rec_px[i] / s.vwap[i] - 1)) });
+        }
+        return { title: mlong(M[i]), rows: rows, warn: s.rec_v[i] == null ? stTxt(s.st[i], M[i]) : null };
+      },
+      aria: `Preço médio da recompra comparado ao preço médio do mês na B3, ${mlab(M[a])} a ${mlab(M[b - 1])}.`,
+    });
+  }
+
+  function chartTes(e) {
+    const [a, b] = win(), idxs = []; for (let i = a; i < b; i++) idxs.push(i);
+    const t = e.s.tes;
+    lineChart("#c-tes", {
+      idxs: idxs, height: 230, zero: true,
+      series: [{ vals: t, color: "var(--s1)", area: true, endLabel: (i) => qtd(t[i]) }],
+      fmtY: fmtMi,
+      empty: "Sem saldo de tesouraria informado",
+      tip: (i) => {
+        const rows = [{ l: "Em tesouraria", v: qtd(t[i]) + " ações", c: "var(--s1)" }];
+        if (i > 0 && t[i] != null && t[i - 1] != null) {
+          const d = t[i] - t[i - 1];
+          rows.push({ l: "Variação no mês", v: (d >= 0 ? "+" : "−") + qtd(Math.abs(d)) });
+        }
+        return { title: "Fim de " + mlong(M[i]), rows: rows, warn: t[i] == null ? stTxt(e.s.st[i], M[i]) : null };
+      },
+      aria: `Ações em tesouraria no fim de cada mês, ${mlab(M[a])} a ${mlab(M[b - 1])}.`,
+    });
+  }
+
+  function chartIns(e) {
+    const plot = document.querySelector("#c-ins .plot");
+    legendaAnt("#c-ins", "bd");
+    const [a, b] = win(), idxs = []; for (let i = a; i < b; i++) idxs.push(i);
+    const s = e.s, f = frame(plot, 230, { l: 46 });
+    const up = idxs.map((i) => (s.ctrl_cv[i] || 0) + (s.adm_cv[i] || 0));
+    const dn = idxs.map((i) => (s.ctrl_vv[i] || 0) + (s.adm_vv[i] || 0));
+    const maxUp = Math.max(0, ...up), maxDn = Math.max(0, ...dn);
+    // Controlador ausente do formulário (art. 11 não obriga; ex.: VIVT3) vem
+    // como null, não zero — e o texto diz isso em vez de "nenhuma compra".
+    const k = e.kpi || {};
+    const semCtrl = e.id !== COB && k.sem_ctrl, semAdm = e.id !== COB && k.sem_adm;
+    const nota = document.getElementById("ins-nota");
+    nota.textContent = semCtrl ? "O formulário desta empresa não informa o controlador (o art. 11 da Res. CVM 44 não obriga); só administradores aparecem." : "";
+    nota.hidden = !semCtrl;
+    if (maxUp === 0 && maxDn === 0) {
+      plot.replaceChildren(); const p = document.createElement("p"); p.className = "empty";
+      p.textContent = semCtrl && semAdm ? "Controlador e administradores não informados no formulário"
+        : semCtrl ? "Nenhuma compra ou venda em bolsa de administradores no período"
+        : "Nenhuma compra ou venda em bolsa de controladores e administradores no período";
+      plot.appendChild(p); return;
+    }
+    // um passo comum para os dois lados; zero proporcional. Passo mais fino (4
+    // marcas) para uma venda pequena não reservar um degrau enorme abaixo do zero.
+    const step = niceMax(Math.max(maxUp, maxDn), 4).step;
+    const top = Math.ceil(maxUp / step) * step, bot = Math.ceil(maxDn / step) * step;
+    const span = top + bot || 1;
+    const y = (v) => f.m.t + ((top - v) / span) * f.ph;
+    for (let j = -Math.round(bot / step); j <= Math.round(top / step); j++) {
+      const v = j * step, yy = Math.round(y(v)) + 0.5;
+      el("line", { class: j === 0 ? "base" : "gl", x1: f.m.l, x2: f.m.l + f.pw, y1: yy, y2: yy }, f.svg);
+      txt(f.svg, f.m.l - 8, yy + 3.5, fmtMi(Math.abs(v), step), "yt");
+    }
+    const slot = f.pw / idxs.length, bw = Math.min(24, slot * 0.62);
+    const xc = (k) => f.m.l + slot * k + slot / 2;
+    const pat = hatch(f.svg, "h-ins");
+    faixaFoco(f, idxs, slot);
+    const groups = [];
+    idxs.forEach((i, k) => {
+      const g = el("g", { class: "mk" }, f.svg), x = xc(k) - bw / 2;
+      if (s.ctrl_cv[i] == null && s.adm_cv[i] == null) {
+        el("rect", { x: x, y: y(0) - 7, width: bw, height: 14, rx: 3, fill: pat }, g);
+      } else {
+        // compras: controladores na base, administradores em cima (2px de respiro)
+        const c = s.ctrl_cv[i] || 0, ad = s.adm_cv[i] || 0, cv = s.ctrl_vv[i] || 0, av = s.adm_vv[i] || 0;
+        // modo mês: os outros meses em cinza, numa barra só (o tooltip continua separando os grupos)
+        const fora = modoMes() && i !== FOCO;
+        const gap = fora ? 0 : 2;
+        const c2 = fora ? "var(--deemph)" : "var(--s2)", c3 = fora ? "var(--deemph)" : "var(--s3)";
+        if (c) el("path", { d: ad ? `M${x},${y(0)}V${y(c)}H${x + bw}V${y(0)}Z` : colPath(x, bw, y(0), y(c)), fill: c2 }, g);
+        if (ad) el("path", { d: colPath(x, bw, y(c) - (c ? gap : 0), y(c + ad) - (c ? gap : 0)), fill: c3 }, g);
+        if (cv) el("path", { d: av ? `M${x},${y(0)}V${y(-cv)}H${x + bw}V${y(0)}Z` : colPath(x, bw, y(0), y(-cv)), fill: c2 }, g);
+        if (av) el("path", { d: colPath(x, bw, y(-cv) + (cv ? gap : 0), y(-cv - av) + (cv ? gap : 0)), fill: c3 }, g);
+      }
+      groups.push(g);
+    });
+    xAxisMonths(f, idxs, xc);
+    let hits = [];
+    const val = (x) => x == null ? "não informado" : brl(x);
+    const show = (kk, ev) => {
+      groups.forEach((g, j) => g.classList.toggle("dim", kk != null && j !== kk));
+      f.svg.classList.toggle("on", kk != null);
+      if (kk == null) return tipHide();
+      const i = idxs[kk];
+      if (s.ctrl_cv[i] == null && s.adm_cv[i] == null) return tipShow([], mlong(M[i]), stTxt(s.st[i], M[i]), ev, hits[kk]);
+      const net = (s.ctrl_cv[i] || 0) + (s.adm_cv[i] || 0) - (s.ctrl_vv[i] || 0) - (s.adm_vv[i] || 0);
+      const est = ["ctrl_cv_e", "ctrl_vv_e", "adm_cv_e", "adm_vv_e"].reduce((acc, key) => acc + ((s[key] && s[key][i]) || 0), 0);
+      tipShow([
+        { l: "Controladores · compras", v: val(s.ctrl_cv[i]), c: "var(--s2)" },
+        { l: "Controladores · vendas", v: val(s.ctrl_vv[i]), c: "var(--s2)" },
+        { l: "Administradores · compras", v: val(s.adm_cv[i]), c: "var(--s3)" },
+        { l: "Administradores · vendas", v: val(s.adm_vv[i]), c: "var(--s3)" },
+        { l: "Compras − vendas", v: brl(net, { sign: true }) },
+      ], mlong(M[i]), est ? estTxt(est) : null, ev, hits[kk]);
+    };
+    hits = hitSlots(f, idxs.length, slot, show);
+    interactive(plot, idxs.length, show);
+    f.svg.setAttribute("aria-label", `Compras e vendas de controladores e administradores, ${mlab(M[a])} a ${mlab(M[b - 1])}.` +
+      (modoMes() ? ` Em destaque, ${mlab(M[FOCO])}.` : ""));
+  }
+
+  function stTxt(st, m) {
+    if (st === "aguardando") return `Formulário ainda no prazo (até ${dataBR(prazoDe(m))})`;
+    // "não localizado", não "não entregue": o envio é exigido nos meses com
+    // alteração de posição (Res. CVM 44, art. 11, §6)
+    if (st === "falta") return "Formulário não localizado na CVM";
+    if (st === "parcial") return "Só um dos dois formulários foi localizado";
+    if (st === "erro") return "Formulário localizado, mas o PDF não foi lido — a próxima atualização tenta de novo";
+    return "Sem dado";
+  }
+  function prazoDe(m) {
+    const y = +m.slice(0, 4), mo = +m.slice(5, 7);
+    const d = new Date(Date.UTC(y, mo, 0)); d.setUTCDate(d.getUTCDate() + 10);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // ---------------------------------------------------------------- cobertura
+  // Mês do fechamento usado no valor de mercado: o da própria empresa, ou o mais
+  // recente da cobertura (sem cotação no último mês, ele é anterior).
+  function fechMes(e) {
+    if (e && e.kpi && e.kpi.fech_mes) return e.kpi.fech_mes;
+    const ms = EMPRESAS.map((x) => x.kpi.fech_mes).filter(Boolean).sort();
+    return ms.length ? ms[ms.length - 1] : M[N - 1];
+  }
+  function chartRank() {
+    const plot = document.querySelector("#c-rank .plot");
+    // "% das ações" não depende do preço de hoje; "% do valor de mercado" sim
+    // (a HAPV3 recomprou a R$ 18,82 e fechou a R$ 6,67: 12% do valor de mercado
+    // atual, mas 4,3% das ações).
+    // Modo mês: as mesmas três medidas, só do último mês (null = sem formulário).
+    const mes = modoMes();
+    const V = (e) => mes ? e.kpi.mes_v : e.kpi.ltm_v;
+    const Q = (e) => mes ? e.kpi.mes_pct_circ : e.kpi.ltm_pct_circ;
+    const Y = (e) => mes ? e.kpi.mes_yield : e.kpi.yield;
+    const P = mes ? pctMes : pct;
+    const MET = {
+      v: { val: (e) => V(e) || 0, lab: (e) => brl(V(e)) + " · " + P(Q(e), 2) + " das ações", curto: (e) => brl(V(e)) },
+      q: { val: (e) => Q(e) || 0, lab: (e) => P(Q(e), 2) + " das ações · " + brl(V(e)), curto: (e) => P(Q(e), 2) },
+      y: { val: (e) => Y(e) || 0, lab: (e) => P(Y(e), 2) + " do valor de mercado", curto: (e) => P(Y(e), 2) },
+    };
+    const met = MET[state.sort] || MET.v;
+    // empate: sem formulário no mês vai depois de "sem recompra"; depois, pelos 12 meses
+    const list = EMPRESAS.slice().sort((x, y) => (met.val(y) - met.val(x)) || ((V(y) == null ? -1 : V(y)) - (V(x) == null ? -1 : V(x))) || (y.kpi.ltm_v - x.kpi.ltm_v));
+    const rowH = 26, f = frame(plot, list.length * rowH + 10, { l: 64, r: 12, t: 4, b: 6 });
+    // Tela estreita: só a métrica da ordenação no rótulo (o resto fica no
+    // tooltip), senão o rótulo come a largura e as barras viram tracinhos.
+    const estreito = f.pw < 420;
+    const key = met.val, lab = estreito ? met.curto : met.lab;
+    const max = Math.max(...list.map(key)) || 1;
+    const labelW = estreito ? 84 : 190, barMax = Math.max(40, f.pw - labelW);
+    const rows = [];
+    list.forEach((e, k) => {
+      const yy = f.m.t + k * rowH, cur = e.id === state.id;
+      const hitR = el("rect", { class: "rowhit", x: 0, y: yy, width: f.W, height: rowH, rx: 6 }, f.svg);
+      txt(f.svg, f.m.l - 10, yy + rowH / 2 + 4, e.b3 || e.id, "rowlab" + (cur ? " cur" : ""), "end");
+      const w = (key(e) / max) * barMax;
+      const bh = 12, by = yy + (rowH - bh) / 2;
+      const dim = state.id !== COB && !cur;
+      if (w >= 1) el("path", { class: "mk", d: `M${f.m.l},${by}H${f.m.l + w - Math.min(4, w)}Q${f.m.l + w},${by} ${f.m.l + w},${by + Math.min(4, w)}V${by + bh - Math.min(4, w)}Q${f.m.l + w},${by + bh} ${f.m.l + w - Math.min(4, w)},${by + bh}H${f.m.l}Z`, fill: dim ? "var(--deemph)" : "var(--s1)" }, f.svg);
+      txt(f.svg, f.m.l + Math.max(w, 0) + 8, yy + rowH / 2 + 4, V(e) ? lab(e) : V(e) == null ? "sem formulário" : "sem recompra", "vl start" + (V(e) ? "" : " sub"));
+      rows.push({ e: e, hit: hitR });
+      hitR.addEventListener("click", () => select(e.id, true));
+      hitR.addEventListener("pointermove", (ev) => showR(k, ev));
+      hitR.addEventListener("pointerdown", (ev) => showR(k, ev));
+    });
+    el("line", { class: "base", x1: f.m.l + 0.5, x2: f.m.l + 0.5, y1: f.m.t, y2: f.m.t + list.length * rowH }, f.svg);
+    function showR(k, ev) {
+      if (k == null) return tipHide();
+      const e = list[k], kp = e.kpi;
+      const aviso = mes ? (V(e) == null ? stTxt(e.s.st[FOCO], M[FOCO]) : null)
+        : kp.ltm_faltas && kp.ltm_faltas.length ? "Sem formulário em " + kp.ltm_faltas.map(mlab).join(", ") : null;
+      tipShow([
+        { l: mes ? "Recompra em " + mlab(M[FOCO]) : "Recompra 12 meses", v: brl(V(e)), c: "var(--s1)" },
+        { l: "% das ações (ex-tesouraria)", v: P(Q(e), 2) },
+        { l: "% do valor de mercado atual", v: P(Y(e), 2) },
+        { l: "Valor de mercado", v: brl(kp.mcap) },
+      ], e.nome + " · " + (e.b3 || e.id), aviso, ev, rows[k].hit);
+    }
+    plot._enter = (k) => select(list[k].id, true);
+    interactive(plot, list.length, (k, ev) => showR(k, ev));
+    document.querySelector("#c-rank h3").textContent = mes ? "Recompra em " + mfull(M[FOCO]) : "Recompra em 12 meses";
+    // modo mês: o título já diz o mês; a legenda fica só com a base do valor de mercado
+    document.getElementById("rank-cap").textContent = (mes ? "" : `${mlab(M[ltmStart])} a ${mlab(M[N - 1])} · `) + `valor de mercado no fechamento de ${mlab(fechMes())}`;
+    f.svg.setAttribute("aria-label", mes ? `Recompra de ${mfull(M[FOCO])} por empresa, em ordem decrescente.` : "Recompra dos últimos 12 meses por empresa, em ordem decrescente.");
+  }
+
+  const BINS = [[0, "0"], [1e6, "até 1"], [10e6, "1–10"], [50e6, "10–50"], [200e6, "50–200"], [Infinity, "acima de 200"]];
+  function bin(v) { if (!v) return 0; for (let j = 1; j < BINS.length; j++) if (v <= BINS[j][0]) return j; return BINS.length - 1; }
+  function chartHeat() {
+    const plot = document.querySelector("#c-heat .plot");
+    const [a, b] = win(), idxs = []; for (let i = a; i < b; i++) idxs.push(i);
+    // modo mês: linhas na ordem do mês em foco (como o ranking) e a coluna dele contornada
+    const mes = modoMes();
+    const vm = (e) => e.kpi.mes_v == null ? -1 : e.kpi.mes_v;
+    const list = EMPRESAS.slice().sort((x, y) => (mes ? vm(y) - vm(x) : 0) || (y.kpi.ltm_v - x.kpi.ltm_v) || x.id.localeCompare(y.id));
+    const rowH = 22, f = frame(plot, list.length * rowH + 40, { l: 64, r: 6, t: 4, b: 34 });
+    f.ph = list.length * rowH;
+    const slot = f.pw / idxs.length, gap = 2;
+    const pat = hatch(f.svg, "h-heat");
+    const cells = [];
+    // No toque, o 1º toque numa célula só mostra o valor; o 2º abre a empresa.
+    let armado = null, ptipo = "mouse";
+    list.forEach((e, r) => {
+      const yy = f.m.t + r * rowH, cur = e.id === state.id;
+      const lab = txt(f.svg, f.m.l - 10, yy + rowH / 2 + 4, e.b3 || e.id, "rowlab" + (cur ? " cur" : ""), "end");
+      lab.addEventListener("click", () => select(e.id, true));
+      idxs.forEach((i, k) => {
+        const v = e.s.rec_v[i];
+        const c = el("rect", { class: "mk", x: f.m.l + slot * k + gap / 2, y: yy + gap / 2, width: Math.max(slot - gap, 1), height: rowH - gap, rx: 3,
+          fill: v == null ? pat : `var(--heat-${bin(v)})` }, f.svg);
+        c.style.cursor = "pointer";
+        c.addEventListener("pointermove", (ev) => showC(r, k, ev));
+        c.addEventListener("pointerdown", (ev) => { ptipo = ev.pointerType || "mouse"; if (ptipo !== "mouse") showC(r, k, ev); });
+        c.addEventListener("click", () => {
+          const chave = r + ":" + k;
+          if (ptipo !== "mouse" && armado !== chave) { armado = chave; return; }
+          select(e.id, true);
+        });
+        cells.push({ c: c, r: r, k: k });
+      });
+      if (cur) el("rect", { class: "selrow", x: f.m.l - 1, y: yy, width: f.pw + 2, height: rowH, rx: 5 }, f.svg);
+    });
+    // mês em foco contornado: num mês fraco a coluna dele fica mais clara que as esmaecidas
+    const kf = mes ? idxs.indexOf(FOCO) : -1;
+    if (kf >= 0) el("rect", { class: "selcol", x: f.m.l + slot * kf, y: f.m.t - 1, width: slot, height: list.length * rowH + 2, rx: 5 }, f.svg);
+    xAxisMonths(f, idxs, (k) => f.m.l + slot * k + slot / 2);
+    function showC(r, k, ev) {
+      const e = list[r], i = idxs[k], v = e.s.rec_v[i];
+      const anchor = cells[r * idxs.length + k].c;
+      if (v == null) return tipShow([], `${e.b3 || e.id} · ${mlong(M[i])}`, stTxt(e.s.st[i], M[i]), ev, anchor);
+      tipShow([
+        { l: "Recompra", v: brl(v), c: "var(--s1)" },
+        { l: "Ações", v: qtd(e.s.rec_q[i]) },
+        { l: "Preço médio", v: px(e.s.rec_px[i]) },
+      ], `${e.nome} · ${mlong(M[i])}`, null, ev, anchor);
+    }
+    // teclado: setas percorrem empresa (linha) a empresa; Enter seleciona
+    plot._enter = (r) => select(list[r].id, true);
+    interactive(plot, list.length, (r, ev) => r == null ? tipHide() : showC(r, idxs.length - 1, ev));
+    plot.addEventListener("mouseleave", tipHide);
+    const sc = document.getElementById("heat-scale"); sc.replaceChildren();
+    BINS.forEach((bn, j) => {
+      const li = document.createElement("li"); const s = document.createElement("span"); s.className = "sw"; s.style.background = `var(--heat-${j})`;
+      if (j === 0) s.style.boxShadow = "inset 0 0 0 1px var(--border)";
+      li.appendChild(s); li.appendChild(document.createTextNode(bn[1])); sc.appendChild(li);
+    });
+    const li = document.createElement("li"); const s = document.createElement("span"); s.className = "sw";
+    s.style.background = "repeating-linear-gradient(135deg, var(--axis) 0 2px, transparent 2px 5px)"; s.style.boxShadow = "inset 0 0 0 1px var(--border)";
+    li.appendChild(s); li.appendChild(document.createTextNode("sem formulário")); sc.appendChild(li);
+    f.svg.setAttribute("aria-label", "Mapa de calor da recompra mensal por empresa" + (mes ? `, ${mlab(M[FOCO])} em destaque` : "") + "; valores em R$ milhões na tabela de cada empresa.");
+  }
+
+  // ---------------------------------------------------------------- indicadores
+  const ICON_UP = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1.5 9 8H1z" fill="currentColor"/></svg>';
+  const ICON_DN = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 8.5 1 2h8z" fill="currentColor"/></svg>';
+  const ICON_WARN = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="currentColor"/></svg>';
+
+  function tile(cls, k, v, dHTML) {
+    const t = document.createElement("div"); t.className = "tile " + (cls || "");
+    const a = document.createElement("p"); a.className = "k"; a.textContent = k; t.appendChild(a);
+    const b = document.createElement("div"); b.className = "v"; b.textContent = v; t.appendChild(b);
+    if (dHTML) { const c = document.createElement("div"); c.className = "d"; c.innerHTML = dHTML; t.appendChild(c); }
+    return t;
+  }
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function deltaHTML(cur, prev, label) {
+    if (prev == null || !(prev > 0)) return prev === 0 && cur > 0 ? `<span class="delta">${ICON_UP} nova recompra</span> <span class="m">${esc(label)}</span>` : "";
+    const d = cur / prev - 1;
+    // queda que arredonda para 100% sem ter zerado (R$ 550 mil vs. R$ 393 mi) não pode parecer zero
+    const dt = cur > 0 && d < 0 && pct(-d, 0) === pct(1, 0) ? "> 99%" : pct(Math.abs(d), 0);
+    return `<span class="delta">${d >= 0 ? ICON_UP : ICON_DN} ${esc(dt)}</span> <span class="m">${esc(label)}</span>`;
+  }
+  function renderKpis(e) {
+    if (modoMes()) return renderKpisMes(e);
+    const k = e.kpi, box = document.getElementById("kpis"); box.replaceChildren();
+    const cob = e.id === COB;
+    const periodo = `${mlab(M[ltmStart])} a ${mlab(M[N - 1])}`;
+    // Só a recompra da própria companhia (e controladas). Controladores e
+    // administradores têm gráfico e colunas próprias e não entram neste número.
+    const hero = tile("hero", cob ? `Recompra das ${k.n_empresas} companhias nos últimos 12 meses` : "Recompra da companhia nos últimos 12 meses", brl(k.ltm_v));
+    const hd = document.createElement("div"); hd.className = "d";
+    hd.innerHTML = `<div>${esc(periodo)}${!cob ? " · " + esc(qtd(k.ltm_q)) + " de ações" : " · " + k.n_recompraram + " de " + k.n_empresas + " empresas recompraram"}</div>` +
+      `<div style="margin-top:6px">${deltaHTML(k.ltm_v, k.prev_v, "vs. 12 meses anteriores (" + brl(k.prev_v) + ")")}</div>`;
+    hero.appendChild(hd);
+    box.appendChild(hero);
+    if (cob) {
+      box.appendChild(tile("", "Recompra / valor de mercado", pct(k.yield, 2), `<span class="m">sobre ${esc(brl(k.mcap))} somados (${esc(mlab(fechMes()))})</span>`));
+      const lider = ENT[k.lider];
+      box.appendChild(tile("", "Maior recompradora", lider ? (lider.b3 || lider.id) : "—", lider ? `${esc(lider.nome)} · <span class="m">${esc(pct(k.lider_pct, 0))} do total</span>` : ""));
+      box.appendChild(tile("", "Empresas que recompraram", `${k.n_recompraram} de ${k.n_empresas}`, `<span class="m">pelo menos um mês nos últimos 12</span>`));
+      box.appendChild(tile("", "Valor de mercado somado", brl(k.mcap), `<span class="m">${EMPRESAS.filter((x) => x.kpi.mcap).length} empresas com cotação</span>`));
+      return;
+    }
+    // Recompra / valor de mercado usa o valor de mercado ATUAL: se a ação caiu
+    // muito depois da recompra, a razão infla (HAPV3: 12% do valor de mercado,
+    // 4,3% das ações). Aviso explícito quando o fechamento está >25% abaixo do pago.
+    let ys = k.mcap ? `<span class="m">valor de mercado ${esc(brl(k.mcap))} (${esc(mlab(fechMes(e)))})</span>` : `<span class="m">sem cotação</span>`;
+    if (k.ltm_px && k.fech && k.fech / k.ltm_px - 1 < -0.25) {
+      ys += `<div class="w">${ICON_WARN} ação ${esc(pct(1 - k.fech / k.ltm_px, 0))} abaixo do preço pago; em ações, ${esc(pct(k.ltm_pct_circ, 2))}</div>`;
+    }
+    if (k.acoes_desatualizadas) {
+      ys += `<div class="w">${ICON_WARN} emissão de ações em ${esc(k.acoes_desatualizadas.map(mlab).join(", "))} ainda fora do total (${esc(k.acoes_fonte || "ITR")})</div>`;
+    }
+    box.appendChild(tile("", "Recompra / valor de mercado", pct(k.yield, 2), ys));
+    let qs = `<span class="m">das ações <span class="nw">ex-tesouraria</span> · ${esc(qtd(k.ltm_q))}</span>`;
+    if (k.ltm_v_est) qs += `<div class="w">≈ inclui ${esc(brl(k.ltm_v_est))} estimado (compra sem preço no formulário)</div>`;
+    box.appendChild(tile("", "Ações recompradas", pct(k.ltm_pct_circ, 2), qs));
+    let pd = `<span class="m">sem recompra em 12 meses</span>`;
+    if (k.ltm_px && k.fech) {
+      const d = k.fech / k.ltm_px - 1;
+      pd = `fechamento ${esc(mlab(k.fech_mes))}: ${esc(px(k.fech))} <span class="delta">${d >= 0 ? ICON_UP : ICON_DN} ${esc(pct(Math.abs(d), 0))}</span>`;
+    }
+    box.appendChild(tile("", "Preço médio pago", px(k.ltm_px), pd));
+    box.appendChild(tile("", "Em tesouraria", k.tes != null ? qtd(k.tes) + " ações" : "—", k.tes != null ? `${esc(pct(k.tes_pct, 1))} do total de ações · <span class="m">fim de ${esc(mlab(k.tes_mes))}</span>` : ""));
+  }
+
+  // Modo mês: os mesmos blocos com o último mês (kpi.mes_*, calculados no build),
+  // comparado com o mês anterior e com a média mensal dos 12 meses.
+  function renderKpisMes(e) {
+    const k = e.kpi, box = document.getElementById("kpis"); box.replaceChildren();
+    const cob = e.id === COB, um = M[FOCO], ant = N > 1 ? M[N - 2] : null;
+    const sem = k.mes_v == null;
+    const b3 = (id) => (ENT[id] && ENT[id].b3) || id;
+    // cobertura: empresa sem formulário no mês fica fora da soma e das comparações
+    const fora = cob ? (k.mes_faltas || []).map(b3) : [];
+    const nForm = cob ? (k.mes_n_com_form != null ? k.mes_n_com_form : k.n_empresas) : 1;
+    const hero = tile("hero", cob ? `Recompra das ${nForm} companhias${fora.length ? " com formulário" : ""} em ${mfull(um)}` : `Recompra da companhia em ${mfull(um)}`, brl(k.mes_v));
+    const hd = document.createElement("div"); hd.className = "d";
+    let h = `<div>${sem ? `<span class="m">sem dado de recompra no mês</span>`
+      : cob ? `${k.mes_n_recompraram} de ${nForm} empresas recompraram no mês`
+      : k.mes_v ? esc(qtd(k.mes_q)) + " de ações" : `<span class="m">sem recompra no mês</span>`}</div>`;
+    if (!sem && ant) {
+      const vAnt = k.mes_ant_v == null ? "sem formulário" : brl(k.mes_ant_v);
+      h += `<div style="margin-top:6px">${deltaHTML(k.mes_v, k.mes_ant_v, `vs. ${mlab(ant)} (${vAnt})`) || `<span class="m">${esc(mlab(ant))}: ${esc(vAnt)}</span>`}</div>`;
+    }
+    if (k.mes_media != null) {
+      h += `<div class="m">média mensal em 12 meses: ${esc(brl(k.mes_media))}${k.mes_media_n < Math.min(N, 12) ? ` (${k.mes_media_n} meses com formulário)` : ""}</div>`;
+    }
+    if (fora.length) h += `<div class="m">comparações sem ${esc(fora.join(", "))}, sem formulário no mês</div>`;
+    if (cob && ant && (k.mes_ant_faltas || []).length) {
+      h += `<div class="w">${ICON_WARN} ${esc(mlab(ant))} sem formulário de ${esc(k.mes_ant_faltas.map(b3).join(", "))} (conta zero na comparação)</div>`;
+    }
+    hd.innerHTML = h;
+    hero.appendChild(hd);
+    box.appendChild(hero);
+    if (cob) {
+      box.appendChild(tile("", "Recompra no mês / valor de mercado", pctMes(k.mes_yield, 2), `<span class="m">sobre ${esc(brl(k.mes_mcap))} somados (${esc(mlab(fechMes()))})${fora.length ? " · sem " + esc(fora.join(", ")) : ""}</span>`));
+      const lider = ENT[k.mes_lider];
+      box.appendChild(tile("", "Maior recompradora no mês", lider ? (lider.b3 || lider.id) : "—", lider ? `${esc(lider.nome)} · <span class="m">${esc(pct(k.mes_lider_pct, 0))} do total</span>` : `<span class="m">nenhuma recompra no mês</span>`));
+      box.appendChild(tile("", "Empresas que recompraram no mês", `${k.mes_n_recompraram} de ${nForm}`, `<span class="m">${fora.length ? esc(fora.join(", ")) + " sem formulário" : "em " + esc(mlab(um))}</span>`));
+      box.appendChild(tile("", "Valor de mercado somado", brl(k.mcap), `<span class="m">${EMPRESAS.filter((x) => x.kpi.mcap).length} empresas com cotação</span>`));
+      return;
+    }
+    // valor de mercado: o mesmo do modo 12 meses (fechamento do último mês com pregão)
+    let ys = k.mcap ? `<span class="m">valor de mercado ${esc(brl(k.mcap))} (${esc(mlab(fechMes(e)))})</span>` : `<span class="m">sem cotação</span>`;
+    if (k.acoes_desatualizadas) {
+      ys += `<div class="w">${ICON_WARN} emissão de ações em ${esc(k.acoes_desatualizadas.map(mlab).join(", "))} ainda fora do total (${esc(k.acoes_fonte || "ITR")})</div>`;
+    }
+    box.appendChild(tile("", "Recompra no mês / valor de mercado", pctMes(k.mes_yield, 2), ys));
+    let qs = `<span class="m">das ações <span class="nw">ex-tesouraria</span>${k.mes_q != null ? " · " + esc(qtd(k.mes_q)) : ""}</span>`;
+    if (k.mes_v_est) qs += `<div class="w">≈ inclui ${esc(brl(k.mes_v_est))} estimado (compra sem preço no formulário)</div>`;
+    box.appendChild(tile("", "Ações recompradas no mês", pctMes(k.mes_pct_circ, 2), qs));
+    // preço pago contra o VWAP do próprio mês na B3 (mesma conta do tooltip do gráfico de preço)
+    let pd = `<span class="m">${sem ? "sem dado no mês" : k.mes_v ? "preço não informado no formulário" : "sem recompra no mês"}</span>`;
+    if (k.mes_px && k.mes_vwap) {
+      const d = k.mes_px / k.mes_vwap - 1;
+      pd = (Math.abs(d) < 0.0005 ? "pagou o VWAP B3 do mês" : `pagou ${esc(pct(Math.abs(d), 1))} ${d > 0 ? "acima" : "abaixo"} do VWAP B3 do mês`) +
+        ` <span class="m">(${esc(px(k.mes_vwap))})</span>`;
+    } else if (k.mes_px) pd = `<span class="m">sem cotação no mês</span>`;
+    box.appendChild(tile("", "Preço médio pago no mês", px(k.mes_px), pd));
+    const tv = k.mes_tes, dv = k.mes_tes_var;
+    // queda por cancelamento não é venda nem entrega: diz a causa
+    const canc = k.mes_canc_q > 0 ? ` (cancelamento de ${qtd(k.mes_canc_q)})` : "";
+    const varTxt = dv == null ? "" : dv === 0 ? " · sem variação no mês" : ` · ${dv > 0 ? "+" : "−"}${qtd(Math.abs(dv))} no mês${dv < 0 ? canc : ""}`;
+    box.appendChild(tile("", "Em tesouraria", tv != null ? qtd(tv) + " ações" : "—", tv != null
+      ? `${k.acoes_total ? esc(pct(tv / k.acoes_total, 1)) + " do total de ações · " : ""}<span class="m">fim de ${esc(mlab(um))}${esc(varTxt)}</span>`
+      : `<span class="m">sem saldo informado em ${esc(mlab(um))}</span>`));
+  }
+
+  function renderHead(e) {
+    document.getElementById("ent-nome").textContent = e.id === COB ? `Cobertura: ${EMPRESAS.length} empresas` : e.nome;
+    document.getElementById("ent-tk").textContent = e.id === COB ? "soma das empresas" : (e.b3 !== e.id ? `${e.b3} · ex-${e.id}` : e.id);
+    const fl = document.getElementById("ent-flags"); fl.replaceChildren();
+    // Cada empresa com os SEUS meses sem formulário (não só as pendentes do último mês).
+    let texto = "";
+    if (modoMes()) {
+      // modo mês: só o mês em foco, com o status real (no prazo, parcial, não localizado)
+      const fm = e.id === COB ? (e.kpi.mes_faltas || []).map((id) => (ENT[id] && ENT[id].b3) || id) : [];
+      if (fm.length) texto = `Sem dado de ${mlab(M[FOCO])} — ${fm.join(", ")} — fora da soma e das comparações`;
+      else if (e.id !== COB && e.kpi.mes_v == null) {
+        const st = stTxt(e.s.st[FOCO], M[FOCO]);
+        texto = `${mlab(M[FOCO])}: ${st.charAt(0).toLowerCase() + st.slice(1)} — sem dado de recompra no mês`;
+      }
+    } else if (e.id === COB) {
+      const pe = e.kpi.faltas_por_empresa || {};
+      const partes = Object.keys(pe).map((id) => `${(ENT[id] && ENT[id].b3) || id}: ${pe[id].map(mlab).join(", ")}`);
+      if (partes.length) texto = "Sem formulário — " + partes.join("; ") + " — fora da soma";
+    } else if ((e.kpi.ltm_faltas || []).length) {
+      texto = "Sem formulário de " + e.kpi.ltm_faltas.map(mlab).join(", ") + " — fica fora da soma";
+    }
+    if (texto) {
+      const s = document.createElement("span"); s.className = "flag";
+      s.innerHTML = ICON_WARN + esc(texto);
+      fl.appendChild(s);
+    }
+  }
+
+  // ---------------------------------------------------------------- tabela
+  function renderTable(e) {
+    const tbl = document.getElementById("tbl"); tbl.replaceChildren();
+    const [a, b] = win(), s = e.s;
+    const cob = e.id === COB;
+    const head = cob
+      ? ["Mês", "Recompra (R$ mi)", "Empresas que recompraram", "Controladores: compras − vendas em bolsa (R$ mi)", "Administradores: compras − vendas em bolsa (R$ mi)", "Sem formulário"]
+      : ["Mês", "Ações recompradas (mil)", "Preço médio (R$)", "Recompra (R$ mi)", "VWAP B3 (R$)", "Tesouraria (mi ações)", "Controladores: compras − vendas em bolsa (R$ mi)", "Administradores: compras − vendas em bolsa (R$ mi)", "Formulários CVM"];
+    const thead = document.createElement("thead"), tr = document.createElement("tr");
+    head.forEach((h) => { const th = document.createElement("th"); th.scope = "col"; th.textContent = h; tr.appendChild(th); });
+    thead.appendChild(tr); tbl.appendChild(thead);
+    const tb = document.createElement("tbody");
+    const netf = (c, v) => (c == null && v == null) ? null : (c || 0) - (v || 0);
+    for (let i = b - 1; i >= a; i--) {
+      const r = document.createElement("tr");
+      if (modoMes() && i === FOCO) r.className = "foco";
+      const cells = cob
+        ? [mlong(M[i]), mi(s.rec_v[i]), String(EMPRESAS.filter((x) => x.s.rec_v[i]).length), mi(netf(s.ctrl_cv[i], s.ctrl_vv[i])), mi(netf(s.adm_cv[i], s.adm_vv[i])), s.faltas[i] ? EMPRESAS.filter((x) => x.s.rec_v[i] == null).map((x) => x.b3 || x.id).join(", ") : "—"]
+        : [mlong(M[i]), s.rec_q[i] == null ? null : nf(0).format(s.rec_q[i] / 1e3), s.rec_px[i] == null ? null : nf(2).format(s.rec_px[i]), mi(s.rec_v[i]), s.vwap[i] == null ? null : nf(2).format(s.vwap[i]), s.tes[i] == null ? null : nf(1).format(s.tes[i] / 1e6), mi(netf(s.ctrl_cv[i], s.ctrl_vv[i])), mi(netf(s.adm_cv[i], s.adm_vv[i])), null];
+      cells.forEach((c, j) => {
+        const td = document.createElement(j === 0 ? "th" : "td");
+        if (j === 0) { td.scope = "row"; td.style.fontWeight = "500"; }
+        if (i === ltmStart - 1 && a < ltmStart) td.className = "ltm-start";
+        if (!cob && j === cells.length - 1) {
+          [["ind.", s.prot_i[i]], ["cons.", s.prot_c[i]]].forEach(([l, p], q) => {
+            if (q) td.appendChild(document.createTextNode(" · "));
+            if (p) { const aEl = document.createElement("a"); aEl.href = META.viewer + "?NumeroProtocoloEntrega=" + encodeURIComponent(p); aEl.target = "_blank"; aEl.rel = "noopener"; aEl.textContent = l; aEl.title = "Protocolo " + p; td.appendChild(aEl); }
+            else { const sp = document.createElement("span"); sp.className = "na"; sp.textContent = l + " —"; td.appendChild(sp); }
+          });
+        } else {
+          td.textContent = c == null ? "—" : c;
+          if (c == null || c === "—") td.classList.add("na");
+        }
+        if (j === 0 && s.st && s.st[i] !== "ok" && !cob) {
+          const tg = document.createElement("span"); tg.className = "tag";
+          tg.textContent = { aguardando: "no prazo", parcial: "parcial", erro: "não lido" }[s.st[i]] || "não localizado";
+          td.appendChild(tg);
+        }
+        r.appendChild(td);
+      });
+      tb.appendChild(r);
+    }
+    tbl.appendChild(tb);
+    document.getElementById("tbl-cap").textContent = cob
+      ? `Soma das ${EMPRESAS.length} empresas · meses mais recentes primeiro`
+      : "Quantidades e preços na base de ações atual · links abrem o formulário na CVM";
+  }
+
+  // ---------------------------------------------------------------- topo e notas
+  function renderFacts() {
+    const ul = document.getElementById("facts");
+    const items = [
+      ["Dados até", mlong(META.ultimo)],
+      ["Histórico", mlab(META.inicio) + " a " + mlab(META.ultimo)],
+      ["Gerado em", META.gerado],
+    ];
+    if ((META.pendentes_ultimo || []).length) items.push([mlab(META.ultimo) + " pendente", META.pendentes_ultimo.join(", ")]);
+    items.forEach(([k, v]) => { const li = document.createElement("li"); const b = document.createElement("b"); b.textContent = v; li.appendChild(document.createTextNode(k + ": ")); li.appendChild(b); ul.appendChild(li); });
+  }
+  function renderNotes() {
+    const n = document.getElementById("notes");
+    const ev = Object.entries(META.eventos || {}).map(([t, l]) => l.map(([d, fa]) => `${t} em ${dataBR(d)} (${fa >= 1 ? (fa === 2 ? "desdobramento 1:2" : "bonificação de " + nf(0).format((fa - 1) * 100) + "%") : "grupamento " + nf(0).format(1 / fa) + ":1"})`).join("; ")).join("; ");
+    const al = Object.entries(META.aliases || {}).map(([t, l]) => `${t} → ${l.join(", ")}`).join("; ");
+    n.innerHTML = `<h2>Fontes e método</h2><ul>
+      <li><b>Recompra</b>: compras de ações no mercado (à vista ou a termo) informadas pela própria companhia e controladas no formulário mensal <i>Valores Mobiliários Negociados e Detidos</i> (Res. CVM 44, art. 11, “Posição Individual”). Vesting, planos de remuneração, swap, empréstimo de ações e subscrição ficam de fora. É a recompra <b>bruta</b>: entregas a planos, cancelamentos e derivativos sobre as próprias ações não são abatidos.</li>
+      <li><b>Controladores e administradores</b>: compras e vendas em bolsa (à vista e a termo) da “Posição Consolidada”. Administradores = Conselho de Administração + Diretoria. Não entram swap e outros derivativos (inclusive com liquidação física), subscrição, empréstimo de ações, planos e a rolagem a termo (venda à vista + compra a termo no mesmo dia e quantidade, que não muda a posição). O art. 11 não obriga o controlador: ele só aparece quando a companhia o inclui (a VIVT3 não informa a Telefónica S.A.). Posições em ações da controladora não entram.</li>
+      <li><b>12 meses</b> = ${esc(mlab(M[ltmStart]))} a ${esc(mlab(M[N - 1]))}. Mês sem formulário localizado fica sem dado (hachurado) e é avisado; não vira zero. O envio é exigido nos meses com alteração de posição (Res. CVM 44, art. 11, §6). Reapresentações substituem o formulário original. Compra ou venda declarada sem preço entra com o valor estimado pelo VWAP do dia na B3 (marcado “≈” no tooltip).</li>
+      <li><b>${esc(ROTULO_MES)}</b> (botão do último mês) = indicadores e ranking só desse mês, comparados com ${N > 1 ? esc(mlab(M[N - 2])) : "o mês anterior"} e com a média mensal dos 12 meses (na empresa, só os meses com formulário; na cobertura, a soma dos 12 meses ÷ 12). Na cobertura, empresa sem formulário no mês fica fora da soma, das comparações e do valor de mercado da razão, e é nomeada no aviso. O preço pago é comparado com o VWAP do mês na B3. Valor de mercado e ações ex-tesouraria são os do modo 12 meses; razão positiva abaixo de 0,005% aparece como “&lt; 0,01%”. Gráficos, mapa e tabela continuam com 12 meses, com o mês em destaque. O botão passa para o mês seguinte na atualização mensal, depois do prazo de entrega (dia 10).</li>
+      <li><b>Preço de mercado</b>: séries históricas da B3 (COTAHIST), mercado à vista; VWAP = volume financeiro ÷ quantidade do mês. <b>Valor de mercado</b> = ações ex-tesouraria × fechamento do último mês com pregão; ações ex-tesouraria = total do último ITR/DFP (composição do capital) menos os cancelamentos posteriores e a tesouraria do último formulário mensal. Não é o free float (“ações em circulação” da Res. CVM 77, que também exclui controlador e administradores).</li>
+      <li><b>Recompra / valor de mercado</b> usa o valor de mercado <i>atual</i>: se a ação caiu depois da recompra, a razão sobe. “% das ações” não depende do preço; o ranking ordena pelos dois.</li>
+      <li><b>Base de ações atual</b>: quantidades e preços ajustados por eventos societários — ${esc(ev || "nenhum")}.${al ? " Mudança de código: " + esc(al) + "." : ""}</li>
+      <li>Gerado em ${esc(META.gerado)} por <code>build_buybacks_dashboard.py</code>; atualização mensal com <code>py buybacks_cvm.py</code> (ver README).</li>
+    </ul>`;
+  }
+
+  // ---------------------------------------------------------------- seleção
+  const sel = document.getElementById("sel");
+  function buildChips() {
+    const opts = [{ id: COB, label: "Cobertura", all: true }].concat(EMPRESAS.map((e) => ({ id: e.id, label: e.b3 || e.id, nome: e.nome, ativo: e.kpi.ltm_v > 0, setor: e.setor })));
+    let setor = null;
+    opts.forEach((o) => {
+      if (o.setor && o.setor !== setor) {
+        setor = o.setor;
+        const g = document.createElement("span"); g.className = "grp"; g.textContent = setor; g.setAttribute("aria-hidden", "true");
+        sel.appendChild(g);
+      }
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "chip" + (o.all ? " all" : ""); btn.setAttribute("role", "radio"); btn.dataset.id = o.id;
+      btn.title = o.all ? `Soma das ${EMPRESAS.length} empresas` : `${o.nome}${o.ativo ? "" : " — sem recompra em 12 meses"}`;
+      if (!o.all) { const d = document.createElement("span"); d.className = "dot" + (o.ativo ? "" : " off"); btn.appendChild(d); }
+      btn.appendChild(document.createTextNode(o.label));
+      btn.addEventListener("click", () => select(o.id));
+      sel.appendChild(btn);
+    });
+    sel.addEventListener("keydown", (ev) => {
+      // padrão de radiogroup: setas (as quatro), Home e End
+      if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(ev.key)) return;
+      ev.preventDefault();
+      const ids = opts.map((o) => o.id), k = ids.indexOf(state.id);
+      const fwd = ev.key === "ArrowRight" || ev.key === "ArrowDown";
+      const nk = ev.key === "Home" ? 0 : ev.key === "End" ? ids.length - 1 : (k + (fwd ? 1 : -1) + ids.length) % ids.length;
+      select(ids[nk]);
+      sel.querySelector(`[data-id="${ids[nk]}"]`).focus();
+    });
+  }
+  function syncControls() {
+    sel.querySelectorAll(".chip").forEach((b) => {
+      const on = b.dataset.id === state.id;
+      b.setAttribute("aria-checked", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;
+      if (on) b.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
+    document.querySelectorAll("#per button").forEach((b) => {
+      const on = +b.dataset.per === state.per;
+      b.setAttribute("aria-checked", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;
+    });
+    document.querySelectorAll(".sort button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.sort === state.sort ? "true" : "false"));
+  }
+  function select(id, scroll) {
+    if (!ENT[id]) return;
+    state.id = id;
+    try { history.replaceState(null, "", "#" + (id === COB ? "cobertura" : id)); } catch (e) { /* sem histórico: ok */ }
+    render();
+    if (scroll) {
+      // desconta a barra fixa do topo, senão o nome e os indicadores ficam embaixo dela
+      const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const nav = document.querySelector(".controls").getBoundingClientRect().height;
+      const alvo = document.querySelector(".ent").getBoundingClientRect().top + window.scrollY - nav - 8;
+      window.scrollTo({ top: Math.max(alvo, 0), behavior: reduce ? "auto" : "smooth" });
+    }
+  }
+  function setPer(p) {
+    state.per = p;
+    try { localStorage.setItem("radar-recompras-per", String(p)); } catch (e) { /* ok */ }
+    render();
+  }
+  const perMes = document.getElementById("per1");
+  perMes.textContent = ROTULO_MES;
+  perMes.title = `Só ${mfull(M[FOCO])}: indicadores e ranking do mês; gráficos com 12 meses e o mês em destaque`;
+  document.querySelectorAll("#per button").forEach((b) => b.addEventListener("click", () => setPer(+b.dataset.per)));
+  document.getElementById("per").addEventListener("keydown", (ev) => {
+    // padrão de radiogroup, como o seletor de empresa: setas (com volta), Home e End
+    if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(ev.key)) return;
+    ev.preventDefault();
+    const ps = Array.from(document.querySelectorAll("#per button"), (b) => +b.dataset.per), k = ps.indexOf(state.per);
+    const fwd = ev.key === "ArrowRight" || ev.key === "ArrowDown";
+    setPer(ev.key === "Home" ? ps[0] : ev.key === "End" ? ps[ps.length - 1] : ps[(k + (fwd ? 1 : -1) + ps.length) % ps.length]);
+    document.getElementById("per" + state.per).focus();
+  });
+  document.querySelectorAll(".sort button").forEach((b) => b.addEventListener("click", () => { state.sort = b.dataset.sort; syncControls(); chartRank(); }));
+  window.addEventListener("hashchange", () => {
+    const id = hashId();
+    if (id && id !== state.id) { state.id = id; render(); }
+  });
+
+  function render() {
+    const e = ENT[state.id];
+    syncControls();
+    renderHead(e);
+    renderKpis(e);
+    const cob = e.id === COB;
+    document.getElementById("c-px").hidden = cob;
+    document.getElementById("c-tes").hidden = cob;
+    chartRec(e);
+    chartRoll(e);
+    if (!cob) { chartPx(e); chartTes(e); }
+    chartIns(e);
+    renderTable(e);
+    chartRank();
+    chartHeat();
+  }
+
+  buildChips();
+  renderFacts();
+  renderNotes();
+  render();
+  let raf = 0, lastW = app.clientWidth;
+  new ResizeObserver(() => {
+    if (app.clientWidth === lastW) return;
+    lastW = app.clientWidth;
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(render);
+  }).observe(app);
+})();
+</script>
+
+</body>
+</html>

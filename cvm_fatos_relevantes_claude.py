@@ -77,12 +77,11 @@ CVM_ALLOWED_CATEGORIES = {
     # por "Dados Econômico-Financeiros" e o download do ITR é um ZIP, que não dá resumo.
     # O earnings_watch.py vigia ITR passando a própria lista de categorias a parse_rows().
     "Dados Econômico-Financeiros",
-    # Informe MENSAL "Negociação de Administradores e Pessoas Ligadas"
-    # (Posição Consolidada / Individual). Traz, por grupo — Controlador,
-    # Conselho, Diretoria, Conselho Fiscal —, saldo inicial, movimentações do
-    # mês (dia, quantidade, preço, volume em R$) e saldo final.
-    # ATENÇÃO: NÃO é recompra da companhia; é negociação de insiders e do
-    # controlador. Recompra de ações próprias sai por outro caminho.
+    # Informe MENSAL, dois formulários: "Posição Consolidada" (por grupo —
+    # Controlador, Conselho, Diretoria, Conselho Fiscal) e "Posição Individual -
+    # Cia, Controladas e Coligadas" (a própria companhia: recompra/tesouraria).
+    # Cada um traz saldo inicial, movimentações do mês (dia, quantidade, preço,
+    # volume em R$) e saldo final. A planilha mensal sai de buybacks_cvm.py.
     "Valores Mobiliários Negociados e Detidos",
 }
 
