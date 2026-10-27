@@ -133,7 +133,7 @@ COMPANIES = [
     {"ticker": "ANIM3", "name": "Ânima", "cvm_code": "23248"},
     {"ticker": "AFYA", "name": "Afya", "cvm_code": None, "sec_cik": "0001771007"},
     {"ticker": "VIVT3", "name": "Telefônica Brasil / Vivo", "cvm_code": "17671"},
-    {"ticker": "TIMS3", "name": "TIM", "cvm_code": "24290"},
+    {"ticker": "TIMS3", "name": "TIM", "cvm_code": "24929"},
     # América Móvil: ADR na NYSE, protocola na SEC como emissora estrangeira.
     # Não depende da BMV — entra pelo mesmo caminho da AFYA.
     {"ticker": "AMX", "name": "América Móvil", "cvm_code": None, "sec_cik": "0001129137"},
