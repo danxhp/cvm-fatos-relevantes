@@ -431,3 +431,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-29 00:20:33 | telegram | OK | ONCO3 | 1581350 | Fato Relevante | Cancelamento AGE 03/11/2026 | chat 8369248929
 2026-10-29 12:35:24 | telegram | OK | ONCO3 | 1581436 | Fato Relevante | Atualização do Plano de Recuperação Extrajudicial | chat 1496332324
 2026-10-29 12:35:25 | telegram | OK | ONCO3 | 1581436 | Fato Relevante | Atualização do Plano de Recuperação Extrajudicial | chat 8369248929
+2026-10-29 13:00:37 | telegram | OK | ANIM3 | 1581458 | Dados Econômico-Financeiros | Moodys Local - Comentário: Acordo com o Einstein é neutro | chat 1496332324
+2026-10-29 13:00:37 | telegram | OK | ANIM3 | 1581458 | Dados Econômico-Financeiros | Moodys Local - Comentário: Acordo com o Einstein é neutro | chat 8369248929
