@@ -437,3 +437,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-29 21:20:26 | telegram | OK | HYPE3 | 1581828 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
 2026-10-30 10:35:28 | telegram | OK | VIVT3 | 1581920 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 - Notícia veiculada na imprensa | chat 1496332324
 2026-10-30 10:35:29 | telegram | OK | VIVT3 | 1581920 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 - Notícia veiculada na imprensa | chat 8369248929
+2026-10-30 21:26:18 | telegram | FAIL | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | chat 1496332324: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=30)
+2026-10-30 21:26:18 | telegram | OK | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | chat 8369248929
