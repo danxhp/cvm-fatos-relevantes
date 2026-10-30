@@ -440,3 +440,4 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-30 21:26:18 | telegram | FAIL | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | chat 1496332324: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=30)
 2026-10-30 21:26:18 | telegram | OK | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | chat 8369248929
 2026-10-30 21:30:43 | telegram | FAIL | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | chat 1496332324: 502 Server Error: Bad Gateway for url: https://api.telegram.org/bot8828403787:AAGc8JRLrXI-Dz5KPNRFgPJib3-cDJhUyqg/sendMessage
+2026-10-30 21:35:40 | telegram | FAIL | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | chat 1496332324: 502 Server Error: Bad Gateway for url: https://api.telegram.org/bot8828403787:AAGc8JRLrXI-Dz5KPNRFgPJib3-cDJhUyqg/sendMessage
