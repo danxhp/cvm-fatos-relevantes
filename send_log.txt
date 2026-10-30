@@ -449,3 +449,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-30 22:45:30 | telegram | OK | ONCO3 | 1582517 | Fato Relevante | Atualização de Adesão ao plano de Recuperação Extrajudicial | chat 8369248929
 2026-10-30 22:45:31 | telegram | OK | TIMS3 | 1582516 | Fato Relevante | Incorporacão I-Systems | chat 1496332324
 2026-10-30 22:45:31 | telegram | OK | TIMS3 | 1582516 | Fato Relevante | Incorporacão I-Systems | chat 8369248929
+2026-10-30 22:50:33 | telegram | OK | TIMS3 | 1582522 | Fato Relevante | Incorporação I-Systems - versão inglês | chat 1496332324
+2026-10-30 22:50:34 | telegram | OK | TIMS3 | 1582522 | Fato Relevante | Incorporação I-Systems - versão inglês | chat 8369248929
