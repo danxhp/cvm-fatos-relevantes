@@ -445,3 +445,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-10-30 21:46:00 | telegram | FAIL | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | chat 1496332324: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=30)
 2026-10-30 21:50:54 | telegram | FAIL | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | chat 1496332324: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=30)
 2026-10-30 21:50:54 | giveup | FAIL | ODPV3 | 1582445 | Dados Econômico-Financeiros | ITR 3T26 Inglês | 6 tentativas; faltou telegram:1496332324
+2026-10-30 22:45:30 | telegram | OK | ONCO3 | 1582517 | Fato Relevante | Atualização de Adesão ao plano de Recuperação Extrajudicial | chat 1496332324
+2026-10-30 22:45:30 | telegram | OK | ONCO3 | 1582517 | Fato Relevante | Atualização de Adesão ao plano de Recuperação Extrajudicial | chat 8369248929
+2026-10-30 22:45:31 | telegram | OK | TIMS3 | 1582516 | Fato Relevante | Incorporacão I-Systems | chat 1496332324
+2026-10-30 22:45:31 | telegram | OK | TIMS3 | 1582516 | Fato Relevante | Incorporacão I-Systems | chat 8369248929
