@@ -455,3 +455,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-03 12:35:28 | telegram | OK | HAPV3 | 1582948 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
 2026-11-03 22:50:25 | telegram | OK | HAPV3 | 1583547 | Comunicado ao Mercado | Renúncia de Membro do Conselho de Administração | chat 1496332324
 2026-11-03 22:50:26 | telegram | OK | HAPV3 | 1583547 | Comunicado ao Mercado | Renúncia de Membro do Conselho de Administração | chat 8369248929
+2026-11-03 23:30:29 | telegram | OK | YDUQ3 | 1583559 | Fato Relevante | Celebração do Protocolo e Justificação da Combinação de Negócios com a Afya | chat 1496332324
+2026-11-03 23:30:29 | telegram | OK | YDUQ3 | 1583559 | Fato Relevante | Celebração do Protocolo e Justificação da Combinação de Negócios com a Afya | chat 8369248929
