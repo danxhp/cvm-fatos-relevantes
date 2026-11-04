@@ -461,3 +461,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-04 13:20:25 | telegram | OK | HAPV3 | 1583720 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
 2026-11-04 17:45:26 | telegram | OK | ONCO3 | 1583827 | Aviso aos Acionistas | Adoção do processo de voto múltiplo | chat 1496332324
 2026-11-04 17:45:27 | telegram | OK | ONCO3 | 1583827 | Aviso aos Acionistas | Adoção do processo de voto múltiplo | chat 8369248929
+2026-11-04 21:15:24 | telegram | OK | TIMS3 | 1583942 | Comunicado ao Mercado | Notícia divulgada na mídia | chat 1496332324
+2026-11-04 21:15:25 | telegram | OK | TIMS3 | 1583942 | Comunicado ao Mercado | Notícia divulgada na mídia | chat 8369248929
