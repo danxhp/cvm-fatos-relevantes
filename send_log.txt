@@ -463,3 +463,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-04 17:45:27 | telegram | OK | ONCO3 | 1583827 | Aviso aos Acionistas | Adoção do processo de voto múltiplo | chat 8369248929
 2026-11-04 21:15:24 | telegram | OK | TIMS3 | 1583942 | Comunicado ao Mercado | Notícia divulgada na mídia | chat 1496332324
 2026-11-04 21:15:25 | telegram | OK | TIMS3 | 1583942 | Comunicado ao Mercado | Notícia divulgada na mídia | chat 8369248929
+2026-11-04 21:35:23 | telegram | OK | COGN3 | 1583959 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 1496332324
+2026-11-04 21:35:24 | telegram | OK | COGN3 | 1583959 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
