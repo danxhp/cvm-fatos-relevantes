@@ -10,11 +10,17 @@ ou seja, TODOS os configurados recebem (hoje: Danilo + Enzo). Dedup é por (prot
 então cada pessoa recebe cada doc uma vez e uma falha de envio é retentada só para quem faltou.
 Avisa no PRIMEIRO documento de resultados de cada empresa (DF, ITR ou release), com pop-up + som + Telegram; encerra quando todas saírem (ou à meia-noite).
 
+Roda SEM janela (pyw.exe): não há console para fechar sem querer. Para acompanhar, o log
+ganha uma linha "vivo" a cada 10 min; um erro inesperado também vai para o log. Só um
+watcher por vez (mutex do Windows) — um segundo se recusa a iniciar.
+
 Uso:
-    py earnings_watch.py            # inicia o watcher (roda até meia-noite)
-    py earnings_watch.py --poll 20  # idem, checando a cada 20s em vez de 60s (só nesta execução)
-    py earnings_watch.py --once     # uma checagem só (mostra o estado atual; NÃO envia nada)
-    py earnings_watch.py --test     # manda um Telegram de teste para todos os destinos e sai
+    iniciar_earnings_watch.cmd       # dois cliques: inicia sem janela, a cada 20s
+    pyw earnings_watch.py --poll 20  # o mesmo, pela linha de comando
+    py earnings_watch.py --status    # está rodando? + últimas linhas do log
+    py earnings_watch.py --stop      # pede para o watcher parar (em até --poll segundos)
+    py earnings_watch.py --once      # uma checagem só (mostra o estado atual; NÃO envia nada)
+    py earnings_watch.py --test      # manda um Telegram de teste para todos os destinos e sai
 
 Reaproveitar no próximo trimestre: ajuste WATCH_TICKERS e WATCH_LABEL abaixo e rode de novo.
 Quem recebe é controlado por email_config.json (telegram.destinations).
@@ -23,10 +29,12 @@ from __future__ import annotations
 
 import ctypes
 import html
+import os
 import subprocess
 import sys
 import threading
 import time
+import traceback
 import winsound
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -38,17 +46,41 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"HYPE3"}                          # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
+WATCH_TICKERS  = {"AXIA3", "VBBR3"}                 # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
+# Empresas FORA do monitor normal (COMPANIES), vigiadas só aqui: ticker -> (código CVM, nome).
+EXTRA_COMPANIES = {"AXIA3": ("2437", "AXIA Energia"),    # AXIA ENERGIA S.A. (ex-Eletrobras)
+                   "VBBR3": ("24295", "Vibra Energia")}  # VIBRA ENERGIA S/A
 # Avisa no PRIMEIRO documento de resultados de cada empresa, de qualquer um destes tipos:
 WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}
 WATCH_LABEL    = "Resultados 3T26"                  # texto no cabeçalho da mensagem
-SPEAK_NAMES    = {"HYPE3": "Hypera", "ODPV3": "Bradesco Saúde"}  # falado: "saiu <nome>"
-POLL_SECONDS   = 60                                 # de minuto a minuto (sobrescreva com --poll N)
+SPEAK_NAMES    = {"AXIA3": "Axia", "VBBR3": "Vibra", "HYPE3": "Hypera", "ODPV3": "Bradesco Saúde"}  # falado: "saiu <nome>"
+SPEAK_TIMES    = 2                                  # quantas vezes fala "saiu <nome>"
+POLL_SECONDS   = 30                                 # intervalo entre checagens (sobrescreva com --poll N)
 # Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
 
+# EXTRA_COMPANIES entram no mapa de códigos só neste processo (o monitor normal não as vê).
+for _t, (_code, _name) in EXTRA_COMPANIES.items():
+    cvm.COMPANY_CODES.setdefault(cvm.normalize_cvm_code(_code),
+                                 {"ticker": _t, "name": _name, "cvm_code": _code})
+
 LOG_FILE = SCRIPT_DIR / "earnings_watch_log.txt"
 SEEN_FILE = SCRIPT_DIR / "earnings_watch_seen.json"   # chaves "protocolo|chat" já ENTREGUES (persiste)
+STOP_FILE = SCRIPT_DIR / "earnings_watch.stop"        # criado por --stop; o watcher para ao vê-lo
+HEARTBEAT_SECONDS = 600                               # linha "vivo" no log a cada 10 min
+MUTEX_NAME = "Local\\earnings_watch_cvm"             # um watcher por vez nesta sessão do Windows
+
+# Sem console (pyw.exe) sys.stdout/stderr são None: print vira no-op e um traceback solto
+# (ex.: numa thread) sumiria. Manda o stderr para o log, para nada morrer sem registro.
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+if sys.stderr is None:
+    sys.stderr = open(LOG_FILE, "a", encoding="utf-8", buffering=1)
+
+_k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+_k32.CreateMutexW.restype = ctypes.c_void_p
+_k32.OpenMutexW.restype = ctypes.c_void_p
+_mutex = None   # handle mantido vivo enquanto o processo roda; o Windows o solta se o processo morrer
 
 import json
 
@@ -86,6 +118,20 @@ def log(msg: str) -> None:
             f.write(line + "\n")
     except Exception:
         pass
+
+
+def _claim_single_instance() -> bool:
+    """True se este é o único watcher. Dois ao mesmo tempo mandariam cada doc em dobro."""
+    global _mutex
+    _mutex = _k32.CreateMutexW(None, False, MUTEX_NAME)
+    return ctypes.get_last_error() != 183          # ERROR_ALREADY_EXISTS
+
+
+def _watcher_running() -> bool:
+    h = _k32.OpenMutexW(0x00100000, False, MUTEX_NAME)   # SYNCHRONIZE
+    if h:
+        _k32.CloseHandle(ctypes.c_void_p(h))
+    return bool(h)
 
 
 def popup(title: str, text: str) -> None:
@@ -213,13 +259,22 @@ def run_watch() -> int:
         log("ERRO: nenhum destino de Telegram em email_config.json (telegram.destinations). Abortando.")
         return 1
 
+    if not _claim_single_instance():
+        log("ERRO: já existe um watcher rodando (veja py earnings_watch.py --status). Não inicio outro.")
+        return 1
+    STOP_FILE.unlink(missing_ok=True)   # pedido de parada antigo não vale para esta execução
+
     start = datetime.now()
     today_str = start.strftime("%d/%m/%Y")
     today_iso = start.strftime("%Y-%m-%d")   # para docs da SEC/EDGAR (data em ISO)
     midnight = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
     chats = ", ".join(str(d["chat_id"]) for d in DESTINATIONS)
     log(f"Watcher iniciado. Vigiando {sorted(WATCH_TICKERS)} | {sorted(WATCH_CATEGORIES)} | hoje={today_str} | a cada {POLL_SECONDS}s.")
-    log(f"Destinos ({len(DESTINATIONS)}): {chats}. Encerra à meia-noite: {midnight:%Y-%m-%d %H:%M}.")
+    log(f"Destinos ({len(DESTINATIONS)}): {chats}. Encerra à meia-noite: {midnight:%Y-%m-%d %H:%M}. "
+        f"PID {os.getpid()} ({Path(sys.executable).name}).")
+    n_ok = n_fail = 0           # checagens na CVM que deram certo / com erro (para a linha "vivo")
+    last_ok = None
+    next_beat = start + timedelta(seconds=HEARTBEAT_SECONDS)
 
     seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
     done: set = set()           # tickers cujo 1º doc já foi ENTREGUE a todos os destinos
@@ -246,11 +301,17 @@ def run_watch() -> int:
             )
             log(f"Encerrado à meia-noite. Saíram={sorted(done)} Faltou={faltou}")
             return 0
+        if STOP_FILE.exists():
+            STOP_FILE.unlink(missing_ok=True)
+            log(f"Parado a pedido (--stop). Saíram={sorted(done)} Faltou={sorted(WATCH_TICKERS - done)}")
+            return 0
 
         try:
             # Avisa no 1º documento (DF/ITR/release) de CADA empresa e a marca 'done' (não repete).
             # Só marca entregue se o envio deu certo — retenta em falha.
-            for f in fetch_watch_filings(cvm.make_session()):
+            filings = fetch_watch_filings(cvm.make_session())
+            n_ok, last_ok = n_ok + 1, datetime.now()
+            for f in filings:
                 if not _is_today(f, today_str, today_iso) or f.ticker in done:
                     continue
                 keys = _keys_for(f)
@@ -263,7 +324,7 @@ def run_watch() -> int:
                     popup(f"🔔 {WATCH_LABEL} — {f.ticker}",
                           f"{f.company_name}\n{f.category}\n{_desc(f)}\n\n"
                           f"Protocolo {f.protocol} · {f.filing_time}")
-                    announce(("Saiu " + name + "! ") * 3)
+                    announce(("Saiu " + name + "! ") * SPEAK_TIMES)
                 text = render(f)
                 for d in DESTINATIONS:
                     key = f"{f.protocol}|{d['chat_id']}"
@@ -279,7 +340,13 @@ def run_watch() -> int:
                     done.add(f.ticker)
                     log(f"{f.ticker} capturada ({len(done)}/{len(WATCH_TICKERS)}).")
         except Exception as e:
+            n_fail += 1
             log(f"WARNING: erro no poll (segue no próximo minuto): {e}")
+
+        if now >= next_beat:   # prova de vida: se o processo morrer, o buraco aparece no log
+            ult = f"{last_ok:%H:%M:%S}" if last_ok else "nenhuma"
+            log(f"vivo — {n_ok} checagens OK, {n_fail} com erro; última OK às {ult}.")
+            next_beat = now + timedelta(seconds=HEARTBEAT_SECONDS)
 
         if done == WATCH_TICKERS:
             broadcast(f"✅ <b>Todas reportaram</b> ({', '.join(sorted(WATCH_TICKERS))}). Encerrando o watcher.")
@@ -311,7 +378,28 @@ def main() -> int:
         print(f"Destinos configurados: {[str(d['chat_id']) for d in DESTINATIONS]}")
         return 0
 
-    return run_watch()
+    if "--status" in sys.argv:
+        print("Watcher RODANDO." if _watcher_running() else "Nenhum watcher rodando.")
+        try:
+            print("Últimas linhas do log:\n" + "".join(LOG_FILE.read_text(encoding="utf-8").splitlines(True)[-4:]))
+        except Exception:
+            pass
+        return 0
+
+    if "--stop" in sys.argv:
+        if not _watcher_running():
+            print("Nenhum watcher rodando.")
+            return 0
+        STOP_FILE.touch()
+        print(f"Pedido de parada enviado; o watcher para em até {POLL_SECONDS}s (confira com --status).")
+        return 0
+
+    try:
+        return run_watch()
+    except BaseException:
+        # Sem console (pyw), o traceback sumiria: registra no log antes de sair.
+        log("ENCERRADO POR ERRO INESPERADO:\n" + traceback.format_exc())
+        raise
 
 
 if __name__ == "__main__":

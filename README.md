@@ -111,6 +111,7 @@ mesmo caminho da Afya, sem código novo. Isso cobre **resultados e eventos mater
 | `email_config.json` | Credenciais SMTP, chave da Anthropic, destinatários, URL do heartbeat, bloco Telegram. **Email desativado** (`enabled: false`). **Não versionado** (`.gitignore`); na nuvem é recriado do secret. |
 | `monitor_log.txt` | Log de execução local (texto livre, verboso). **Efêmero na nuvem** — não versionado. |
 | `earnings_watch.py` | **Watcher pontual de resultados** — standalone, roda local, reaproveita o fetch/parse do monitor. Vigia tickers (CVM + SEC) de minuto a minuto e avisa no **Telegram + pop-up + voz** na tela. Ver [seção dedicada](#watcher-pontual-de-resultados-earnings_watchpy). |
+| `iniciar_earnings_watch.cmd` | Atalho de dois cliques: inicia o watcher **sem janela** (`pyw`), no intervalo `POLL_SECONDS` da config. |
 | `earnings_watch_seen.json` / `earnings_watch_log.txt` | Estado (protocolos já entregues) e log do watcher. **Não versionados** (`.gitignore`). |
 | `amx_recompra.py` | **Recompra mensal da AMX** via BMV. Workflow próprio (mensal), fonte própria. Ver [seção dedicada](#recompra-mensal-da-amx-amx_recomprapy). |
 | `.github/workflows/amx_recompra.yml` | Workflow mensal (`cron: 10 13 2 * *`) do relatório de recompra. |
@@ -940,17 +941,31 @@ Já foi usado nos resultados do **2T26** (FLRY3/HYPE3, BLAU3 e o lote de saúde/
 - **Pop-up na tela (Windows):** `MessageBox` centralizado (1x por empresa + um na inicialização,
   como confirmação). Roda em thread — não trava o loop. Aparece na sessão interativa (por isso o
   agendamento usa `LogonType Interactive`).
-- **Alerta de voz (Windows):** bips + **fala "saiu &lt;nome&gt;" 3x** (TTS via SAPI, sem dependência
+- **Alerta de voz (Windows):** bips + **fala "saiu &lt;nome&gt;" 2x** (`SPEAK_TIMES`; TTS via SAPI, sem dependência
   extra; nome por ticker em `SPEAK_NAMES`). Uma vez por empresa, em thread.
+- **Roda sem janela (`pyw.exe`):** não há console para ser fechado sem querer — em 27/10/2026 o
+  watcher (então numa janela minimizada) morreu sem registro e perdeu o ITR da Hypera. A confirmação
+  de que subiu é o pop-up + Telegram de início; para acompanhar, use `--status`.
+- **Prova de vida no log:** uma linha `vivo — N checagens OK, K com erro; última OK às HH:MM:SS` a
+  cada 10 min (`HEARTBEAT_SECONDS`). Se o processo morrer, o buraco aparece no log. Um erro
+  inesperado é gravado no log com o traceback (sem console ele sumiria). Não há aviso no Telegram
+  quando o watcher para — decisão do usuário.
+- **Um watcher por vez:** mutex do Windows (`Local\earnings_watch_cvm`); um segundo se recusa a
+  iniciar (dois mandariam cada documento em dobro). O Windows libera o mutex se o processo morrer.
 
 ### Uso
 
 ```bash
-py earnings_watch.py            # inicia o watcher (roda até meia-noite ou até todos saírem)
-py earnings_watch.py --poll 20  # idem, checando a cada 20s em vez de 60s (só nesta execução)
-py earnings_watch.py --once     # uma checagem só: lista o estado atual, NÃO envia nada
-py earnings_watch.py --test     # manda um Telegram de teste para TODOS os destinos e sai
+iniciar_earnings_watch.cmd       # dois cliques: inicia SEM janela, a cada POLL_SECONDS (config)
+pyw earnings_watch.py --poll 20  # pela linha de comando, sobrescrevendo o intervalo
+py earnings_watch.py --status    # está rodando? + últimas linhas do log
+py earnings_watch.py --stop      # pede para o watcher parar (em até --poll segundos)
+py earnings_watch.py --once      # uma checagem só: lista o estado atual, NÃO envia nada
+py earnings_watch.py --test      # manda um Telegram de teste para TODOS os destinos e sai
 ```
+
+Iniciar pelo `.cmd` (Explorer) deixa o watcher independente de qualquer terminal ou sessão do
+Claude Code: fechar o VS Code não o derruba.
 
 ### Reaproveitar no próximo trimestre
 
@@ -958,12 +973,17 @@ Edite o bloco de config no topo do script e rode de novo. Quem recebe é control
 `email_config.json` (`telegram.destinations`), não pelo script.
 
 ```python
-WATCH_TICKERS    = {"YDUQ3", "DASA3", "AFYA"}       # tickers (CVM e/ou SEC via sec_cik)
+WATCH_TICKERS    = {"AXIA3"}                        # tickers (CVM e/ou SEC via sec_cik)
+EXTRA_COMPANIES  = {"AXIA3": ("2437", "AXIA Energia")}  # empresas fora do monitor normal: ticker -> (cód. CVM, nome)
 WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}  # 1º doc de qualquer uma
-WATCH_LABEL      = "Resultados 2T26"                # texto do cabeçalho da mensagem
-SPEAK_NAMES      = {"YDUQ3": "Yduqs", "DASA3": "Dasa", "AFYA": "Afya"}  # falado: "saiu <nome>"
-POLL_SECONDS     = 60                               # de minuto a minuto
+WATCH_LABEL      = "Resultados 3T26"                # texto do cabeçalho da mensagem
+SPEAK_NAMES      = {"AXIA3": "Axia"}                # falado: "saiu <nome>"
+POLL_SECONDS     = 30                               # intervalo entre checagens (o .cmd usa este)
 ```
+
+Empresa que **não** está em `COMPANIES` (o monitor normal) entra em `EXTRA_COMPANIES` — vale só
+para o watcher; o monitor normal continua sem ela. Confirme o código no cadastro da CVM
+(`cad_cia_aberta.csv`, coluna `CD_CVM`).
 
 > Antes de um novo alvo, zere o estado: `echo [] > earnings_watch_seen.json`.
 
@@ -973,7 +993,7 @@ O watcher roda até a meia-noite **do dia em que começa**, então para um resul
 início via Task Scheduler (ou só rode o script na hora). Exemplo — início às 17:00 (after-market):
 
 ```powershell
-$action  = New-ScheduledTaskAction -Execute 'C:\Windows\py.exe' -Argument 'C:\dev\GS\CVM_Fatos_relevantes\earnings_watch.py' -WorkingDirectory 'C:\dev\GS\CVM_Fatos_relevantes'
+$action  = New-ScheduledTaskAction -Execute 'C:\Windows\pyw.exe' -Argument 'C:\dev\GS\CVM_Fatos_relevantes\earnings_watch.py --poll 20' -WorkingDirectory 'C:\dev\GS\CVM_Fatos_relevantes'
 $trigger = New-ScheduledTaskTrigger -Once -At '2026-08-13T17:00:00'
 $settings = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 9)
 Register-ScheduledTask -TaskName 'EarningsWatch_2T26' -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force
