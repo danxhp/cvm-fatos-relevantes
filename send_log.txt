@@ -467,3 +467,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-04 21:35:24 | telegram | OK | COGN3 | 1583959 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
 2026-11-05 02:40:23 | telegram | OK | ONCO3 | 1584307 | Fato Relevante | Atualização adesão - Plano de Recuperação Extrajudicial | chat 1496332324
 2026-11-05 02:40:24 | telegram | OK | ONCO3 | 1584307 | Fato Relevante | Atualização adesão - Plano de Recuperação Extrajudicial | chat 8369248929
+2026-11-05 21:05:57 | telegram | OK | FLRY3 | 1584808 | Dados Econômico-Financeiros | DF versão português | chat 1496332324
+2026-11-05 21:05:58 | telegram | OK | FLRY3 | 1584808 | Dados Econômico-Financeiros | DF versão português | chat 8369248929
+2026-11-05 21:05:58 | telegram | OK | FLRY3 | 1584800 | Dados Econômico-Financeiros | DF versão inglês | chat 1496332324
+2026-11-05 21:05:59 | telegram | OK | FLRY3 | 1584800 | Dados Econômico-Financeiros | DF versão inglês | chat 8369248929
