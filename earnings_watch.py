@@ -47,10 +47,12 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"ANIM3", "DASA3", "FLRY3"}        # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
+WATCH_TICKERS  = {"ANIM3", "DASA3", "FLRY3", "RECV3"}   # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
 # Empresas FORA do monitor normal (COMPANIES), vigiadas só aqui: ticker -> (código CVM, nome).
 # Ex.: {"AXIA3": ("2437", "AXIA Energia"), "VBBR3": ("24295", "Vibra Energia")}
-EXTRA_COMPANIES = {}                                # ANIM3/DASA3/FLRY3 já estão no COMPANIES
+# RECV3: cód. 25780 no cadastro de companhias abertas da CVM (cad_cia_aberta.csv, 05/11/2026),
+# para o pessoal de óleo e gás. ANIM3/DASA3/FLRY3 já estão no COMPANIES.
+EXTRA_COMPANIES = {"RECV3": ("25780", "PetroRecôncavo")}
 # Avisa no PRIMEIRO documento de resultados de cada empresa, de qualquer um destes tipos:
 WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}
 WATCH_LABEL    = "Resultados 3T26"                  # texto no cabeçalho da mensagem
@@ -59,7 +61,8 @@ WATCH_LABEL    = "Resultados 3T26"                  # texto no cabeçalho da men
 # alarme e marcaria a empresa como reportada — e o resultado de verdade passaria batido.
 IGNORE_SUBJECTS = ("moody", "fitch", "s&p", "standard & poor", "rating")   # trecho do assunto, sem caixa
 SPEAK_NAMES    = {"ANIM3": "Ânima", "DASA3": "Dasa", "FLRY3": "Fleury",
-                  "AXIA3": "Axia", "VBBR3": "Vibra", "HYPE3": "Hypera", "ODPV3": "Bradesco Saúde"}  # falado: "saiu <nome>"
+                  "AXIA3": "Axia", "VBBR3": "Vibra", "HYPE3": "Hypera", "ODPV3": "Bradesco Saúde",
+                  "RECV3": "PetroRecôncavo"}  # falado: "saiu <nome>"
 SPEAK_TIMES    = 2                                  # quantas vezes fala "saiu <nome>"
 POLL_SECONDS   = 30                                 # intervalo entre checagens (sobrescreva com --poll N)
 # Só começa a vigiar neste horário (hora do PC = BRT): até lá o processo fica aberto, calado,
