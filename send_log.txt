@@ -485,3 +485,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-05 22:10:30 | telegram | OK | QUAL3 | 1585093 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
 2026-11-05 22:40:59 | telegram | OK | DASA3 | 1585117 | Dados Econômico-Financeiros | Demonstrações Financeiras 3T26 | chat 1496332324
 2026-11-05 22:40:59 | telegram | OK | DASA3 | 1585117 | Dados Econômico-Financeiros | Demonstrações Financeiras 3T26 | chat 8369248929
+2026-11-05 22:45:40 | telegram | OK | DASA3 | 1585176 | Dados Econômico-Financeiros | Release de Resultados 3T26 | chat 1496332324
+2026-11-05 22:45:41 | telegram | OK | DASA3 | 1585176 | Dados Econômico-Financeiros | Release de Resultados 3T26 | chat 8369248929
