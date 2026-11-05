@@ -475,3 +475,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-05 21:10:58 | telegram | OK | FLRY3 | 1584826 | Comunicado ao Mercado | Apresentação de Resultados 3T26 | chat 8369248929
 2026-11-05 21:10:59 | telegram | OK | FLRY3 | 1584824 | Dados Econômico-Financeiros | Press-release 3T26 | chat 1496332324
 2026-11-05 21:10:59 | telegram | OK | FLRY3 | 1584824 | Dados Econômico-Financeiros | Press-release 3T26 | chat 8369248929
+2026-11-05 21:25:45 | telegram | OK | ANIM3 | 1584881 | Dados Econômico-Financeiros | Release de Resultados 3T26 | chat 1496332324
+2026-11-05 21:25:46 | telegram | OK | ANIM3 | 1584881 | Dados Econômico-Financeiros | Release de Resultados 3T26 | chat 8369248929
