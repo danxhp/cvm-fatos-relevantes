@@ -663,13 +663,20 @@ def archive_filings(new_filings: List[Filing]) -> None:
 
 SUMMARY_MODEL = "claude-haiku-4-5"
 SUMMARY_MAX_DOC_CHARS = 80_000
+SUMMARY_MAX_BULLETS = 4   # resumo sucinto: 3 a 4 bullets (pedido do usuário)
 SUMMARY_SYSTEM_PROMPT = (
     "Você é um analista financeiro experiente especializado em mercado de capitais brasileiro. "
     "Sua tarefa é resumir comunicados de empresas listadas (Fatos Relevantes, Avisos aos Acionistas, "
     "etc.) em bullets curtos e objetivos em português brasileiro. Foque no que é importante para "
     "o investidor: o que aconteceu, valores, datas, partes envolvidas e potencial impacto. "
     "Use apenas informações que estão no documento — nunca invente dados. "
-    "Se um número estiver no documento, cite-o; se não estiver, não especule."
+    "Se um número estiver no documento, cite-o exatamente como está, sem arredondar "
+    "(ex.: 103.185.920 ações, não '103,2 milhões'); se não estiver, não especule. "
+    "O leitor é analista de ações: não explique conceitos de mercado (voto múltiplo, OPA, "
+    "JCP etc.), relate só o que o documento traz. "
+    "O resumo vai direto para uma mensagem de Telegram em texto puro: não use markdown "
+    "(nada de **negrito**, títulos ou itálico) nem rótulos no início do bullet "
+    "(como 'Contexto:' ou 'Impacto:'); escreva frases diretas."
 )
 
 
@@ -761,14 +768,14 @@ def fetch_document_text(
 CATEGORY_PROMPT_HINTS = {
     "Valores Mobiliários Negociados e Detidos": (
         "Este é o informe MENSAL de negociação de administradores e pessoas ligadas. "
-        "Para CADA grupo presente (Controlador, Conselho de Administração, Diretoria, "
-        "Conselho Fiscal), reporte em um bullet: o grupo, a quantidade em SALDO FINAL por "
-        "espécie (ON/PN) e, se houve MOVIMENTAÇÕES NO MÊS, a quantidade comprada/vendida, "
-        "o preço e o volume em R$. "
-        "Se o formulário indicar que NÃO houve operações no mês, diga isso em UM único "
-        "bullet curto e não repita grupo por grupo. "
-        "Comece o primeiro bullet com o mês de referência. Os números são o mais "
-        "importante: transcreva-os com precisão, não arredonde."
+        "Comece o primeiro bullet com o mês de referência. "
+        "Dê um bullet para cada grupo (Controlador, Conselho de Administração, Diretoria, "
+        "Conselho Fiscal, Companhia) que teve MOVIMENTAÇÃO NO MÊS: quantidade comprada/vendida "
+        "por espécie (ON/PN), preço, volume em R$ e saldo final. "
+        "Grupos sem movimentação vão juntos em UM bullet curto; se ninguém negociou no mês, "
+        "diga isso em um único bullet. NÃO mencione debêntures nem outros valores "
+        "mobiliários que não tiveram movimentação no mês. "
+        "Os números são o mais importante: transcreva-os com precisão, não arredonde."
     ),
 }
 
@@ -788,8 +795,13 @@ def summarize_filing(
         f"Data do arquivamento: {filing.filing_time}\n"
         f"Categoria: {filing.category}\n\n"
         f"--- INÍCIO DO DOCUMENTO ---\n{doc_text}\n--- FIM DO DOCUMENTO ---\n\n"
-        "Resuma o documento em 3 a 7 bullets curtos, cada um em uma linha começando com '- '. "
+        "Resuma o documento em 3 bullets (no máximo "
+        f"{SUMMARY_MAX_BULLETS}, só se o 4º trouxer um fato novo e relevante), cada um em uma "
+        "linha começando com '- ', com no máximo 25 palavras. Texto puro, sem markdown. "
         "Sem introdução, sem conclusão — apenas os bullets. "
+        "Nunca gaste bullet com formalidades: base legal (Resolução CVM 44, Lei 6.404 etc.), "
+        "onde os documentos estão disponíveis, ou o compromisso de divulgar/manter o "
+        "mercado informado. "
         + instrucao
     )
 
@@ -811,12 +823,28 @@ def summarize_filing(
     raw = "".join(b.text for b in response.content if b.type == "text")
     bullets: List[str] = []
     for line in raw.split("\n"):
-        line = line.strip()
-        if line[:2] in ("- ", "• ", "* "):
-            bullets.append(line[2:].strip())
-        elif re.match(r"^\d+[\.\)]\s", line):
-            bullets.append(re.sub(r"^\d+[\.\)]\s+", "", line).strip())
-    return bullets or None
+        # Limpa o markdown ANTES de achar o marcador: '**- texto**', '-texto',
+        # '1) texto' e '• texto' contam todos como bullet.
+        found = re.match(r"^(?:[-•*–]|\d+[.)])\s*(.+)", clean_bullet(line))
+        if found and re.search(r"\w", found.group(1)):   # '---' é separador, não bullet
+            bullets.append(found.group(1).strip())
+    if not bullets:
+        log(f"WARNING: resumo sem bullets reconhecíveis ({filing.identifier}; "
+            f"stop_reason={response.stop_reason}): {raw[:200]!r}")
+        return None
+    # Rede de segurança: o prompt pede 3-4, mas o modelo às vezes passa do ponto.
+    return bullets[:SUMMARY_MAX_BULLETS]
+
+
+def clean_bullet(text: str) -> str:
+    """
+    Tira markdown que o modelo às vezes devolve mesmo instruído a não usar.
+    O Telegram está em parse_mode=HTML, então '**negrito**' apareceria literal.
+    """
+    text = text.replace("**", "").replace("__", "")
+    text = re.sub(r"`+", "", text)
+    text = re.sub(r"^#+\s*", "", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def gather_summaries(
@@ -1078,15 +1106,16 @@ def get_telegram_config() -> Optional[Dict]:
 def _render_filing_telegram(filing: Filing, bullets: Optional[List[str]]) -> str:
     e = html.escape
     category = filing.category or "Comunicado"
+    company = " ".join((filing.company_name or "").split())  # RAD traz espaços duplos
     lines = [
-        f"<b>[{e(category)}] {e(filing.ticker)} — {e(filing.company_name)}</b>",
+        f"<b>[{e(category)}] {e(filing.ticker)} — {e(company)}</b>",
         f"<i>{e(filing.subject or filing.doc_type or 'Sem assunto')}</i>",
     ]
     if filing.filing_time:
         lines.append(f"🗓 {e(filing.filing_time)}")
     lines.append("")
     if bullets:
-        lines.extend(f"• {e(b)}" for b in bullets)
+        lines.extend(f"• {e(clean_bullet(b))}" for b in bullets)
     else:
         lines.append("<i>Resumo indisponível.</i>")
     lines.append("")
