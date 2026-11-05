@@ -17,6 +17,7 @@ watcher por vez (mutex do Windows) — um segundo se recusa a iniciar.
 Uso:
     iniciar_earnings_watch.cmd       # dois cliques: inicia sem janela, a cada 20s
     pyw earnings_watch.py --poll 20  # o mesmo, pela linha de comando
+    pyw earnings_watch.py --start-at 17:00   # abre agora, só começa a vigiar às 17h (ver START_AT)
     py earnings_watch.py --status    # está rodando? + últimas linhas do log
     py earnings_watch.py --stop      # pede para o watcher parar (em até --poll segundos)
     py earnings_watch.py --once      # uma checagem só (mostra o estado atual; NÃO envia nada)
@@ -46,16 +47,26 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"AXIA3", "VBBR3"}                 # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
+WATCH_TICKERS  = {"ANIM3", "DASA3", "FLRY3"}        # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
 # Empresas FORA do monitor normal (COMPANIES), vigiadas só aqui: ticker -> (código CVM, nome).
-EXTRA_COMPANIES = {"AXIA3": ("2437", "AXIA Energia"),    # AXIA ENERGIA S.A. (ex-Eletrobras)
-                   "VBBR3": ("24295", "Vibra Energia")}  # VIBRA ENERGIA S/A
+# Ex.: {"AXIA3": ("2437", "AXIA Energia"), "VBBR3": ("24295", "Vibra Energia")}
+EXTRA_COMPANIES = {}                                # ANIM3/DASA3/FLRY3 já estão no COMPANIES
 # Avisa no PRIMEIRO documento de resultados de cada empresa, de qualquer um destes tipos:
 WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}
 WATCH_LABEL    = "Resultados 3T26"                  # texto no cabeçalho da mensagem
-SPEAK_NAMES    = {"AXIA3": "Axia", "VBBR3": "Vibra", "HYPE3": "Hypera", "ODPV3": "Bradesco Saúde"}  # falado: "saiu <nome>"
+# A CVM também põe comentários de agência de rating em "Dados Econômico-Financeiros"
+# (ex.: ANIM3 29/10 "Moodys Local - Comentário..."). Sem filtro, um deles dispararia o
+# alarme e marcaria a empresa como reportada — e o resultado de verdade passaria batido.
+IGNORE_SUBJECTS = ("moody", "fitch", "s&p", "standard & poor", "rating")   # trecho do assunto, sem caixa
+SPEAK_NAMES    = {"ANIM3": "Ânima", "DASA3": "Dasa", "FLRY3": "Fleury",
+                  "AXIA3": "Axia", "VBBR3": "Vibra", "HYPE3": "Hypera", "ODPV3": "Bradesco Saúde"}  # falado: "saiu <nome>"
 SPEAK_TIMES    = 2                                  # quantas vezes fala "saiu <nome>"
 POLL_SECONDS   = 30                                 # intervalo entre checagens (sobrescreva com --poll N)
+# Só começa a vigiar neste horário (hora do PC = BRT): até lá o processo fica aberto, calado,
+# sem consultar a CVM. "AAAA-MM-DD HH:MM" ou "HH:MM" (hoje). None = começa na hora.
+# Data/hora que já passou = começa na hora (config velha não trava um uso futuro).
+# Sobrescreva com --start-at HH:MM ou --start-at agora.
+START_AT       = "2026-11-05 17:00"
 # Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
 
@@ -254,6 +265,47 @@ def save_seen(seen: set) -> None:
         log(f"WARNING: falha ao salvar estado: {e}")
 
 
+def _parse_start_at(value):
+    """'AAAA-MM-DD HH:MM' ou 'HH:MM' (hoje) -> datetime; None/''/'agora' -> None."""
+    if not value or str(value).strip().lower() in ("agora", "now", "none"):
+        return None
+    value = str(value).strip()
+    try:
+        return datetime.strptime(value, "%Y-%m-%d %H:%M")
+    except ValueError:
+        pass
+    try:
+        hm = datetime.strptime(value, "%H:%M")
+    except ValueError:
+        raise ValueError(f"START_AT inválido: {value!r} (use 'AAAA-MM-DD HH:MM', 'HH:MM' ou 'agora')")
+    return datetime.now().replace(hour=hm.hour, minute=hm.minute, second=0, microsecond=0)
+
+
+def _wait_until(start_at: datetime) -> bool:
+    """
+    Fica aberto e calado até start_at (sem consultar a CVM, sem Telegram). Segura o mutex,
+    então --status mostra RODANDO e um 2º watcher se recusa. False se pediram --stop.
+    """
+    log(f"Agendado: começa a vigiar {sorted(WATCH_TICKERS)} às {start_at:%d/%m/%Y %H:%M}. "
+        f"Aguardando (PID {os.getpid()}).")
+    popup(f"Watcher {WATCH_LABEL} agendado",
+          f"Começa às {start_at:%H:%M} — {', '.join(sorted(WATCH_TICKERS))}.\n"
+          f"Até lá fica aguardando, sem checar a CVM.")
+    next_beat = datetime.now() + timedelta(minutes=30)
+    while True:
+        now = datetime.now()
+        if now >= start_at:
+            return True
+        if STOP_FILE.exists():
+            STOP_FILE.unlink(missing_ok=True)
+            log("Parado a pedido (--stop) antes do horário de início.")
+            return False
+        if now >= next_beat:   # prova de vida também na espera
+            log(f"aguardando — começa às {start_at:%H:%M}.")
+            next_beat = now + timedelta(minutes=30)
+        time.sleep(max(1.0, min(15.0, (start_at - now).total_seconds())))
+
+
 def run_watch() -> int:
     if not DESTINATIONS:
         log("ERRO: nenhum destino de Telegram em email_config.json (telegram.destinations). Abortando.")
@@ -263,6 +315,10 @@ def run_watch() -> int:
         log("ERRO: já existe um watcher rodando (veja py earnings_watch.py --status). Não inicio outro.")
         return 1
     STOP_FILE.unlink(missing_ok=True)   # pedido de parada antigo não vale para esta execução
+
+    start_at = _parse_start_at(START_AT)
+    if start_at and start_at > datetime.now() and not _wait_until(start_at):
+        return 0
 
     start = datetime.now()
     today_str = start.strftime("%d/%m/%Y")
@@ -279,6 +335,7 @@ def run_watch() -> int:
     seen = load_seen()          # chaves "protocolo|chat" JÁ ENTREGUES (persistido)
     done: set = set()           # tickers cujo 1º doc já foi ENTREGUE a todos os destinos
     alerted: set = set()        # tickers que já dispararam pop-up + som (uma vez cada)
+    ignored: set = set()        # protocolos descartados por IGNORE_SUBJECTS (loga uma vez)
 
     broadcast(
         f"🟢 <b>Watcher {html.escape(WATCH_LABEL)} iniciado</b>\n"
@@ -313,6 +370,11 @@ def run_watch() -> int:
             n_ok, last_ok = n_ok + 1, datetime.now()
             for f in filings:
                 if not _is_today(f, today_str, today_iso) or f.ticker in done:
+                    continue
+                if any(s in _desc(f).lower() for s in IGNORE_SUBJECTS):
+                    if f.protocol not in ignored:
+                        ignored.add(f.protocol)
+                        log(f"Ignorado (rating, não é resultado): {f.ticker} | {_desc(f)} | proto {f.protocol}")
                     continue
                 keys = _keys_for(f)
                 if all(k in seen for k in keys):
@@ -357,9 +419,12 @@ def run_watch() -> int:
 
 
 def main() -> int:
-    global POLL_SECONDS
+    global POLL_SECONDS, START_AT
     if "--poll" in sys.argv:   # ex.: --poll 20 → checa a cada 20s só nesta execução
         POLL_SECONDS = int(sys.argv[sys.argv.index("--poll") + 1])
+    if "--start-at" in sys.argv:   # ex.: --start-at 17:00 | --start-at agora
+        START_AT = sys.argv[sys.argv.index("--start-at") + 1]
+    _parse_start_at(START_AT)      # valida já: erro de digitação aparece antes de agendar
 
     if "--test" in sys.argv:
         if not DESTINATIONS:
