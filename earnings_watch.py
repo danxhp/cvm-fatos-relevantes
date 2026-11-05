@@ -111,7 +111,7 @@ def _desc(f) -> str:
 
 
 def log(msg: str) -> None:
-    line = f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}"
+    line = f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {cvm.redact_secrets(msg)}"  # token na URL de erro
     print(line, flush=True)
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:

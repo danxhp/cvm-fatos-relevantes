@@ -85,7 +85,7 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like 
 
 def log(msg: str) -> None:
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{stamp}] {msg}"
+    line = f"[{stamp}] {cvm.redact_secrets(msg)}"   # erro do Telegram traz o token na URL
     print(line)
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:

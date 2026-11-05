@@ -187,17 +187,30 @@ class Filing:
 # UTILS
 # ============================================================================
 
+_BOT_TOKEN_RE = re.compile(r"bot\d+:[A-Za-z0-9_-]{20,}")
+
+
+def redact_secrets(text) -> str:
+    """
+    Esconde o token do bot do Telegram. A URL da API (api.telegram.org/bot<TOKEN>/...)
+    aparece nas mensagens de erro do requests (ex.: '502 Server Error ... for url: ...');
+    sem isso o token ia para o send_log.txt commitado e para o log público do Actions.
+    """
+    return _BOT_TOKEN_RE.sub("bot<TOKEN>", str(text))
+
+
 def log(msg: str) -> None:
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{stamp}] {msg}"
+    line = f"[{stamp}] {redact_secrets(msg)}"
     print(line)
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(line + "\n")
 
 
 def _sanitize_log_field(value) -> str:
-    """Remove | e quebras de linha para não corromper o formato pipe-separated."""
-    return re.sub(r"[|\r\n]+", " ", str(value if value is not None else "")).strip()
+    """Remove | e quebras de linha (formato pipe-separated) e esconde segredos."""
+    text = redact_secrets(value if value is not None else "")
+    return re.sub(r"[|\r\n]+", " ", text).strip()
 
 
 def log_send(channel: str, filing: "Filing", ok: bool, detail: str = "") -> None:
@@ -661,7 +674,11 @@ def archive_filings(new_filings: List[Filing]) -> None:
 # DOCUMENT FETCH + SUMMARIZATION
 # ============================================================================
 
-SUMMARY_MODEL = "claude-haiku-4-5"
+SUMMARY_MODEL = "claude-sonnet-5-5"
+# Thinking adaptativo (padrão do Sonnet 5.5) conta no max_tokens: folga de sobra
+# para o raciocínio + os 3-4 bullets. O effort controla quanto ele pensa.
+SUMMARY_EFFORT = "medium"
+SUMMARY_MAX_TOKENS = 16_000
 SUMMARY_MAX_DOC_CHARS = 80_000
 SUMMARY_MAX_BULLETS = 4   # resumo sucinto: 3 a 4 bullets (pedido do usuário)
 SUMMARY_SYSTEM_PROMPT = (
@@ -797,7 +814,7 @@ def summarize_filing(
         f"--- INÍCIO DO DOCUMENTO ---\n{doc_text}\n--- FIM DO DOCUMENTO ---\n\n"
         "Resuma o documento em 3 bullets (no máximo "
         f"{SUMMARY_MAX_BULLETS}, só se o 4º trouxer um fato novo e relevante), cada um em uma "
-        "linha começando com '- ', com no máximo 25 palavras. Texto puro, sem markdown. "
+        "linha começando com '- ', com no máximo 20 palavras (uma ideia por bullet). Texto puro, sem markdown. "
         "Sem introdução, sem conclusão — apenas os bullets. "
         "Nunca gaste bullet com formalidades: base legal (Resolução CVM 44, Lei 6.404 etc.), "
         "onde os documentos estão disponíveis, ou o compromisso de divulgar/manter o "
@@ -806,10 +823,15 @@ def summarize_filing(
     )
 
     try:
-        response = client.messages.create(
+        # Sem cache_control: cada documento é único, o cache nunca seria lido
+        # e a escrita custa 25% a mais. fallbacks="default": se o Sonnet recusar
+        # por um dos classificadores de segurança, o servidor tenta outro modelo.
+        response = client.beta.messages.create(
             model=SUMMARY_MODEL,
-            max_tokens=1024,
-            cache_control={"type": "ephemeral"},
+            max_tokens=SUMMARY_MAX_TOKENS,
+            output_config={"effort": SUMMARY_EFFORT},
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
             system=SUMMARY_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_prompt}],
         )
@@ -820,6 +842,14 @@ def summarize_filing(
         log(f"WARNING: erro inesperado no resumo ({filing.identifier}): {e}")
         return None
 
+    if response.stop_reason == "refusal":
+        detalhe = getattr(response, "stop_details", None)
+        log(f"WARNING: modelo recusou resumir {filing.identifier} "
+            f"(categoria={getattr(detalhe, 'category', None)}).")
+        return None
+
+    # Lê só blocos de texto: com thinking ligado a resposta começa com blocos
+    # 'thinking' (vazios por padrão), que não fazem parte do resumo.
     raw = "".join(b.text for b in response.content if b.type == "text")
     bullets: List[str] = []
     for line in raw.split("\n"):

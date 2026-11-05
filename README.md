@@ -60,7 +60,7 @@ CVM (endpoint interno) + SEC (API oficial)
 Deduplica contra seen_protocols.json
       │  o que é novo →
       ▼
-Claude (Haiku) resume o documento em bullets
+Claude (Sonnet 5.5) resume o documento em 3-4 bullets
       ▼
 Telegram (um bot por destino)   ·   email (SMTP/Brevo) desativado (enabled=false)
       │  → só o que foi CONFIRMADO entra em seen_protocols.json;
