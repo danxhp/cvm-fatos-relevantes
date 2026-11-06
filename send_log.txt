@@ -487,3 +487,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-05 22:40:59 | telegram | OK | DASA3 | 1585117 | Dados Econômico-Financeiros | Demonstrações Financeiras 3T26 | chat 8369248929
 2026-11-05 22:45:40 | telegram | OK | DASA3 | 1585176 | Dados Econômico-Financeiros | Release de Resultados 3T26 | chat 1496332324
 2026-11-05 22:45:41 | telegram | OK | DASA3 | 1585176 | Dados Econômico-Financeiros | Release de Resultados 3T26 | chat 8369248929
+2026-11-06 10:55:26 | telegram | OK | ONCO3 | 1585225 | Aviso aos Acionistas | Suspensão AGE - 06.11 | chat 1496332324
+2026-11-06 10:55:26 | telegram | OK | ONCO3 | 1585225 | Aviso aos Acionistas | Suspensão AGE - 06.11 | chat 8369248929
+2026-11-06 10:55:27 | telegram | OK | ONCO3 | 1585226 | Fato Relevante | Suspensão AGE - 06.11; Suspensão AGE - 06.11 | chat 1496332324
+2026-11-06 10:55:27 | telegram | OK | ONCO3 | 1585226 | Fato Relevante | Suspensão AGE - 06.11; Suspensão AGE - 06.11 | chat 8369248929
