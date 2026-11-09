@@ -29,13 +29,18 @@ Quem recebe é controlado por email_config.json (telegram.destinations).
 from __future__ import annotations
 
 import ctypes
+import functools
 import html
+import io
+import math
 import os
+import struct
 import subprocess
 import sys
 import threading
 import time
 import traceback
+import wave
 import winsound
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -47,29 +52,33 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import cvm_fatos_relevantes_claude as cvm  # reaproveita make_session/fetch/parse/build_url/config
 
 # ============================ CONFIG (edite para reusar) ============================
-WATCH_TICKERS  = {"ANIM3", "DASA3", "FLRY3", "RECV3"}   # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
+WATCH_TICKERS  = {"BRAV3", "MATD3", "TIMS3"}   # (ODPV3 = BRADSAÚDE S.A. na CVM, cód. 20125)
 # Empresas FORA do monitor normal (COMPANIES), vigiadas só aqui: ticker -> (código CVM, nome).
-# Ex.: {"AXIA3": ("2437", "AXIA Energia"), "VBBR3": ("24295", "Vibra Energia")}
-# RECV3: cód. 25780 no cadastro de companhias abertas da CVM (cad_cia_aberta.csv, 05/11/2026),
-# para o pessoal de óleo e gás. ANIM3/DASA3/FLRY3 já estão no COMPANIES.
-EXTRA_COMPANIES = {"RECV3": ("25780", "PetroRecôncavo")}
+# Ex.: {"AXIA3": ("2437", "AXIA Energia"), "VBBR3": ("24295", "Vibra Energia"),
+#       "RECV3": ("25780", "PetroRecôncavo")}
+# BRAV3: cód. 25291 (BRAVA ENERGIA S.A., ex-3R) no cadastro de companhias abertas da CVM
+# (cad_cia_aberta.csv). MATD3/TIMS3 já estão no COMPANIES.
+EXTRA_COMPANIES = {"BRAV3": ("25291", "Brava Energia")}
 # Avisa no PRIMEIRO documento de resultados de cada empresa, de qualquer um destes tipos:
 WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}
 WATCH_LABEL    = "Resultados 3T26"                  # texto no cabeçalho da mensagem
 # A CVM também põe comentários de agência de rating em "Dados Econômico-Financeiros"
 # (ex.: ANIM3 29/10 "Moodys Local - Comentário..."). Sem filtro, um deles dispararia o
 # alarme e marcaria a empresa como reportada — e o resultado de verdade passaria batido.
-IGNORE_SUBJECTS = ("moody", "fitch", "s&p", "standard & poor", "rating")   # trecho do assunto, sem caixa
+# Idem para "Relatório de Agente Fiduciário" de debêntures (BRAV3/MATD3/TIMS3, fim de abril).
+IGNORE_SUBJECTS = ("moody", "fitch", "s&p", "standard & poor", "rating",
+                   "agente fiduci")   # trecho do assunto, sem caixa
 SPEAK_NAMES    = {"ANIM3": "Ânima", "DASA3": "Dasa", "FLRY3": "Fleury",
                   "AXIA3": "Axia", "VBBR3": "Vibra", "HYPE3": "Hypera", "ODPV3": "Bradesco Saúde",
-                  "RECV3": "PetroRecôncavo"}  # falado: "saiu <nome>"
+                  "RECV3": "PetroRecôncavo", "BRAV3": "Brava", "MATD3": "Mater Dei",
+                  "TIMS3": "TIM"}  # falado: "saiu <nome>"
 SPEAK_TIMES    = 2                                  # quantas vezes fala "saiu <nome>"
 POLL_SECONDS   = 30                                 # intervalo entre checagens (sobrescreva com --poll N)
 # Só começa a vigiar neste horário (hora do PC = BRT): até lá o processo fica aberto, calado,
 # sem consultar a CVM. "AAAA-MM-DD HH:MM" ou "HH:MM" (hoje). None = começa na hora.
 # Data/hora que já passou = começa na hora (config velha não trava um uso futuro).
 # Sobrescreva com --start-at HH:MM ou --start-at agora.
-START_AT       = "2026-11-05 17:00"
+START_AT       = None
 # Destinos do Telegram: lidos de email_config.json (telegram.destinations). Todos recebem.
 # ===================================================================================
 
@@ -163,16 +172,58 @@ def popup(title: str, text: str) -> None:
         log(f"WARNING: pop-up thread falhou: {e}")
 
 
-def announce(phrase: str) -> None:
-    """Bip + fala em voz alta (TTS via SAPI do Windows) — não bloqueia o loop."""
-    safe = str(phrase).replace("'", "''")
-    def _run():
+@functools.lru_cache(maxsize=1)
+def _chime_wav() -> bytes:
+    """
+    Gongo curto e suave antes da fala, no estilo dos avisos de estação de metrô: 3 notas
+    subindo (Mi maior: Mi5, Sol#5, Si5), timbre de vibrafone (fundamental + parcial 4x que
+    some rápido), ataque de 8 ms para não estalar. Gerado em memória — sem arquivo de som.
+    """
+    rate = 44100
+    notes = ((0.00, 659.25, 0.45), (0.17, 830.61, 0.45), (0.34, 987.77, 0.80))  # (início s, Hz, decaimento s)
+    total = 1.7
+    n = int(rate * total)
+    buf = [0.0] * n
+    for start, freq, tau in notes:
+        i0 = int(start * rate)
+        for i in range(n - i0):
+            t = i / rate
+            env = min(1.0, t / 0.008) * math.exp(-t / tau)
+            if t > 0.008 and env < 1e-4:          # já decaiu (o ataque começa em 0: não pare nele)
+                break
+            buf[i0 + i] += env * (math.sin(2 * math.pi * freq * t)
+                                  + 0.12 * math.exp(-t / 0.08) * math.sin(2 * math.pi * 4 * freq * t))
+    fade = int(0.05 * rate)                       # rampa final: sem clique no fim
+    for i in range(fade):
+        buf[n - 1 - i] *= i / fade
+    peak = max(abs(x) for x in buf) or 1.0
+    scale = 0.45 * 32767 / peak                   # volume moderado (45% do máximo)
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(struct.pack(f"<{n}h", *(int(x * scale) for x in buf)))
+    return out.getvalue()
+
+
+def _play_chime() -> None:
+    try:
+        winsound.PlaySound(_chime_wav(), winsound.SND_MEMORY)   # síncrono (roda na thread do announce)
+    except Exception as e:
+        log(f"WARNING: gongo falhou ({e}); usando bip.")
         try:
-            for _ in range(2):
-                winsound.Beep(880, 180)
-                winsound.Beep(1245, 180)
+            winsound.Beep(880, 180)
+            winsound.Beep(1245, 180)
         except Exception:
             pass
+
+
+def announce(phrase: str) -> None:
+    """Gongo + fala em voz alta (TTS via SAPI do Windows) — não bloqueia o loop."""
+    safe = str(phrase).replace("'", "''")
+    def _run():
+        _play_chime()
         try:
             subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
