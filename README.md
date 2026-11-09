@@ -919,7 +919,8 @@ Ferramenta **standalone** para dias de divulgação de resultados: vigia um conj
 tela (Windows). Roda **local** (não no GitHub Actions) e reaproveita o fetch/parse do monitor
 principal (`import cvm_fatos_relevantes_claude`).
 
-Já foi usado nos resultados do **2T26** (FLRY3/HYPE3, BLAU3 e o lote de saúde/educação).
+Já foi usado nos resultados do **2T26** (FLRY3/HYPE3, BLAU3 e o lote de saúde/educação) e do
+**3T26** (ANIM3/DASA3/FLRY3/RECV3 em 05/11; BRAV3/MATD3/TIMS3 em 09/11).
 
 ### Comportamento
 
@@ -928,6 +929,10 @@ Já foi usado nos resultados do **2T26** (FLRY3/HYPE3, BLAU3 e o lote de saúde/
   Econômico-Financeiros* + *ITR*), o que vier primeiro (DF, ITR ou release) — dispara **som + pop-up
   + Telegram** e marca a empresa como pronta (não repete os docs seguintes dela). **Encerra quando
   todas** saírem, ou à meia-noite (horário local) com um resumo do que saiu / faltou.
+- **Ignora o que não é resultado** (`IGNORE_SUBJECTS`, trecho do assunto, sem caixa): a CVM também
+  põe em *Dados Econômico-Financeiros* comentários de agência de rating (Moody's/Fitch/S&P) e o
+  *Relatório de Agente Fiduciário* das debêntures (fim de abril). Sem o filtro, um deles dispararia
+  o alarme e marcaria a empresa como pronta — e o resultado de verdade passaria batido.
 - **Só documentos de hoje:** considera apenas docs com data de hoje — inclusive os já publicados
   quando o watcher começou (então um start "atrasado" no mesmo dia ainda entrega o que saiu antes).
 - **CVM + SEC/EDGAR:** tickers na B3 vêm da CVM (filtrados por `WATCH_CATEGORIES`); tickers com
@@ -941,8 +946,10 @@ Já foi usado nos resultados do **2T26** (FLRY3/HYPE3, BLAU3 e o lote de saúde/
 - **Pop-up na tela (Windows):** `MessageBox` centralizado (1x por empresa + um na inicialização,
   como confirmação). Roda em thread — não trava o loop. Aparece na sessão interativa (por isso o
   agendamento usa `LogonType Interactive`).
-- **Alerta de voz (Windows):** bips + **fala "saiu &lt;nome&gt;" 2x** (`SPEAK_TIMES`; TTS via SAPI, sem dependência
-  extra; nome por ticker em `SPEAK_NAMES`). Uma vez por empresa, em thread.
+- **Alerta sonoro + voz (Windows):** um **gongo curto e suave** (3 notas subindo, estilo aviso de
+  estação de metrô, ~1,7 s; gerado em memória por `_chime_wav`, sem arquivo de som — o bip antigo
+  fica só como fallback) e depois a **fala "saiu &lt;nome&gt;" 2x** (`SPEAK_TIMES`; TTS via SAPI, sem
+  dependência extra; nome por ticker em `SPEAK_NAMES`). Uma vez por empresa, em thread.
 - **Roda sem janela (`pyw.exe`):** não há console para ser fechado sem querer — em 27/10/2026 o
   watcher (então numa janela minimizada) morreu sem registro e perdeu o ITR da Hypera. A confirmação
   de que subiu é o pop-up + Telegram de início; para acompanhar, use `--status`.
@@ -958,6 +965,7 @@ Já foi usado nos resultados do **2T26** (FLRY3/HYPE3, BLAU3 e o lote de saúde/
 ```bash
 iniciar_earnings_watch.cmd       # dois cliques: inicia SEM janela, a cada POLL_SECONDS (config)
 pyw earnings_watch.py --poll 20  # pela linha de comando, sobrescrevendo o intervalo
+pyw earnings_watch.py --start-at 17:00   # abre agora, só começa a vigiar às 17h (ver START_AT)
 py earnings_watch.py --status    # está rodando? + últimas linhas do log
 py earnings_watch.py --stop      # pede para o watcher parar (em até --poll segundos)
 py earnings_watch.py --once      # uma checagem só: lista o estado atual, NÃO envia nada
@@ -977,9 +985,17 @@ WATCH_TICKERS    = {"AXIA3"}                        # tickers (CVM e/ou SEC via 
 EXTRA_COMPANIES  = {"AXIA3": ("2437", "AXIA Energia")}  # empresas fora do monitor normal: ticker -> (cód. CVM, nome)
 WATCH_CATEGORIES = {"Dados Econômico-Financeiros", "ITR - Informações Trimestrais"}  # 1º doc de qualquer uma
 WATCH_LABEL      = "Resultados 3T26"                # texto do cabeçalho da mensagem
+IGNORE_SUBJECTS  = ("moody", "fitch", "s&p", "standard & poor", "rating", "agente fiduci")  # não é resultado
 SPEAK_NAMES      = {"AXIA3": "Axia"}                # falado: "saiu <nome>"
+SPEAK_TIMES      = 2                                # quantas vezes fala "saiu <nome>"
 POLL_SECONDS     = 30                               # intervalo entre checagens (o .cmd usa este)
+START_AT         = None                             # ou "AAAA-MM-DD HH:MM" / "HH:MM" (hora do PC = BRT)
 ```
+
+`START_AT` no futuro: o watcher abre na hora, segura o mutex (`--status` mostra RODANDO), fica
+calado sem consultar a CVM e só começa no horário — loga `aguardando` a cada 30 min, e `--stop`
+cancela a espera. Data que já passou = começa na hora (config velha não trava um uso futuro). Pelo
+`.cmd`/Explorer não dá para passar `--start-at`, por isso o valor fica na config.
 
 Empresa que **não** está em `COMPANIES` (o monitor normal) entra em `EXTRA_COMPANIES` — vale só
 para o watcher; o monitor normal continua sem ela. Confirme o código no cadastro da CVM
@@ -987,10 +1003,28 @@ para o watcher; o monitor normal continua sem ela. Confirme o código no cadastr
 
 > Antes de um novo alvo, zere o estado: `echo [] > earnings_watch_seen.json`.
 
+### Quando costumam sair
+
+Horário do **1º documento** de resultados na CVM (release ou ITR/DFP — o que dispara o watcher),
+levantado em 09/11/2026. A busca por período da CVM só volta ~1 ano, então são 3 trimestres:
+
+| Ticker | 4T25 | 1T26 | 2T26 | Faixa típica |
+|---|---|---|---|---|
+| TIMS3 | 10/02 18:58 (release) | 05/05 19:01 (release) | 27/07 18:22 (release) | 18h20–19h; release ~10–25 min antes do ITR |
+| BRAV3 | 11/03 21:29 (release) | 06/05 19:50 (release) | 05/08 18:24 (ITR) | 18h20–20h; anual mais tarde |
+| MATD3 | 22/03 18:08 (DFP, domingo) | 06/05 20:03 (ITR) | 12/08 20:14 (ITR) | ~20h; ITR e release juntos |
+
+3T26 em 05/11 (pelo log do watcher): FLRY3 18:00, ANIM3 18:11, RECV3 18:31 e DASA3 19:32 — todas
+pelo ITR. A ata do Conselho da Dasa aprovando o resultado saiu antes, às 18:21, mas não dispara:
+é *Reunião da Administração*, fora de `WATCH_CATEGORIES`.
+
+Tudo depois do fechamento — `START_AT = "17:00"` cobre com folga.
+
 ### Agendar para um dia específico (Windows)
 
-O watcher roda até a meia-noite **do dia em que começa**, então para um resultado futuro agende o
-início via Task Scheduler (ou só rode o script na hora). Exemplo — início às 17:00 (after-market):
+O watcher roda até a meia-noite **do dia em que começa**. Para mais tarde **no mesmo dia**, o mais
+simples é `START_AT` (acima). Para um dia futuro, agende o início via Task Scheduler (ou só rode o
+script na hora). Exemplo — início às 17:00 (after-market):
 
 ```powershell
 $action  = New-ScheduledTaskAction -Execute 'C:\Windows\pyw.exe' -Argument 'C:\dev\GS\CVM_Fatos_relevantes\earnings_watch.py --poll 20' -WorkingDirectory 'C:\dev\GS\CVM_Fatos_relevantes'
