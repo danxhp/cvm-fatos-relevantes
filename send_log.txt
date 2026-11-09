@@ -507,3 +507,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-06 22:26:09 | telegram | OK | YDUQ3 | 1585803 | Comunicado ao Mercado | Fusão Yduqs e Afya - Atualização do Cronograma | chat 8369248929
 2026-11-06 22:26:09 | telegram | OK | YDUQ3 | 1585802 | Comunicado ao Mercado | Fusão Yduqs e Afya - Atualização do Cronograma | chat 1496332324
 2026-11-06 22:26:10 | telegram | OK | YDUQ3 | 1585802 | Comunicado ao Mercado | Fusão Yduqs e Afya - Atualização do Cronograma | chat 8369248929
+2026-11-09 13:30:33 | telegram | OK | MATD3 | 1585999 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-11-09 13:30:34 | telegram | OK | MATD3 | 1585999 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
