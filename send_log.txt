@@ -531,3 +531,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-09 21:45:44 | telegram | OK | TIMS3 | 1586514 | Comunicado ao Mercado | Apresentação de Resultados 3T26 | chat 8369248929
 2026-11-09 21:45:44 | telegram | OK | TIMS3 | 1586513 | Dados Econômico-Financeiros | Earnings Release 3Q26 | chat 1496332324
 2026-11-09 21:45:45 | telegram | OK | TIMS3 | 1586513 | Dados Econômico-Financeiros | Earnings Release 3Q26 | chat 8369248929
+2026-11-09 22:41:03 | telegram | OK | TIMS3 | 1586615 | Dados Econômico-Financeiros | ITR 3Q26 | chat 1496332324
+2026-11-09 22:41:03 | telegram | OK | TIMS3 | 1586615 | Dados Econômico-Financeiros | ITR 3Q26 | chat 8369248929
+2026-11-09 22:41:04 | telegram | OK | TIMS3 | 1586572 | Dados Econômico-Financeiros | ITR 3T26 | chat 1496332324
+2026-11-09 22:41:05 | telegram | OK | TIMS3 | 1586572 | Dados Econômico-Financeiros | ITR 3T26 | chat 8369248929
