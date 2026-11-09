@@ -515,3 +515,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-09 16:55:27 | telegram | OK | VIVT3 | 1586080 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
 2026-11-09 17:00:40 | telegram | OK | VIVT3 | 1586085 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
 2026-11-09 17:00:41 | telegram | OK | VIVT3 | 1586085 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-11-09 21:15:34 | telegram | OK | HYPE3 | 1586336 | Dados Econômico-Financeiros | ITR 3T26 (ENG) | chat 1496332324
+2026-11-09 21:15:35 | telegram | OK | HYPE3 | 1586336 | Dados Econômico-Financeiros | ITR 3T26 (ENG) | chat 8369248929
