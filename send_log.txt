@@ -571,3 +571,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-10 21:15:54 | telegram | OK | VIVT3 | 1587193 | Comunicado ao Mercado | Apresentação de Resultados 3T26 | chat 8369248929
 2026-11-10 21:15:54 | telegram | OK | VIVT3 | 1587189 | Aviso aos Acionistas | Data de pagamento de JSCP deliberados em fevereiro de 2026 | chat 1496332324
 2026-11-10 21:15:55 | telegram | OK | VIVT3 | 1587189 | Aviso aos Acionistas | Data de pagamento de JSCP deliberados em fevereiro de 2026 | chat 8369248929
+2026-11-10 21:40:53 | telegram | OK | COGN3 | 1587344 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-11-10 21:40:53 | telegram | OK | COGN3 | 1587344 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
