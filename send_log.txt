@@ -543,3 +543,13 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-10 14:05:36 | telegram | OK | ANIM3 | 1586855 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
 2026-11-10 19:30:34 | telegram | OK | MATD3 | 1587030 | Comunicado ao Mercado | Webcast 3T26 | chat 1496332324
 2026-11-10 19:30:34 | telegram | OK | MATD3 | 1587030 | Comunicado ao Mercado | Webcast 3T26 | chat 8369248929
+2026-11-10 21:05:46 | telegram | OK | DASA3 | 1587148 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-11-10 21:05:47 | telegram | OK | DASA3 | 1587148 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-11-10 21:05:47 | telegram | OK | ODPV3 | 1587146 | Comunicado ao Mercado | Atlântica Hospitais e Fleury criam rede de clínicas oncológicas | chat 1496332324
+2026-11-10 21:05:48 | telegram | OK | ODPV3 | 1587146 | Comunicado ao Mercado | Atlântica Hospitais e Fleury criam rede de clínicas oncológicas | chat 8369248929
+2026-11-10 21:05:48 | telegram | OK | DASA3 | 1587140 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-11-10 21:05:48 | telegram | OK | DASA3 | 1587140 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-11-10 21:05:49 | telegram | OK | TIMS3 | 1587133 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-11-10 21:05:49 | telegram | OK | TIMS3 | 1587133 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-11-10 21:05:50 | telegram | OK | TIMS3 | 1587127 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-11-10 21:05:50 | telegram | OK | TIMS3 | 1587127 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
