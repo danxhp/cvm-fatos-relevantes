@@ -553,3 +553,13 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-10 21:05:49 | telegram | OK | TIMS3 | 1587133 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-11-10 21:05:50 | telegram | OK | TIMS3 | 1587127 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-11-10 21:05:50 | telegram | OK | TIMS3 | 1587127 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-11-10 21:11:05 | telegram | OK | HAPV3 | 1587187 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-11-10 21:11:05 | telegram | OK | HAPV3 | 1587187 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-11-10 21:11:06 | telegram | OK | TIMS3 | 1587186 | Comunicado ao Mercado | Mudança de Auditor Independente | chat 1496332324
+2026-11-10 21:11:07 | telegram | OK | TIMS3 | 1587186 | Comunicado ao Mercado | Mudança de Auditor Independente | chat 8369248929
+2026-11-10 21:11:07 | telegram | OK | FLRY3 | 1587184 | Fato Relevante | Nova Sociedade entre Fleury e Atlântica Hospitais para o Desenvolvimento de Clínicas Oncológicas | chat 1496332324
+2026-11-10 21:11:08 | telegram | OK | FLRY3 | 1587184 | Fato Relevante | Nova Sociedade entre Fleury e Atlântica Hospitais para o Desenvolvimento de Clínicas Oncológicas | chat 8369248929
+2026-11-10 21:11:08 | telegram | OK | HYPE3 | 1587167 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-11-10 21:11:09 | telegram | OK | HYPE3 | 1587167 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-11-10 21:11:10 | telegram | OK | HYPE3 | 1587166 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-11-10 21:11:10 | telegram | OK | HYPE3 | 1587166 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
