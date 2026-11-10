@@ -579,3 +579,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-10 22:05:29 | telegram | OK | BLAU3 | 1587437 | Dados Econômico-Financeiros | Release 3T26 | chat 8369248929
 2026-11-10 22:11:13 | telegram | OK | BLAU3 | 1587445 | Dados Econômico-Financeiros | Demonstrações Financeiras 3T26 | chat 1496332324
 2026-11-10 22:11:14 | telegram | OK | BLAU3 | 1587445 | Dados Econômico-Financeiros | Demonstrações Financeiras 3T26 | chat 8369248929
+2026-11-10 22:45:29 | telegram | OK | BLAU3 | 1587541 | Comunicado ao Mercado | Destaques Resultados 3T26 | chat 1496332324
+2026-11-10 22:45:30 | telegram | OK | BLAU3 | 1587541 | Comunicado ao Mercado | Destaques Resultados 3T26 | chat 8369248929
