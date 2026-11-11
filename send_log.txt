@@ -591,3 +591,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-11 13:05:35 | telegram | OK | BLAU3 | 1587723 | Comunicado ao Mercado | Apresentação de Resultados 3T26 | chat 8369248929
 2026-11-11 21:15:32 | telegram | OK | FLRY3 | 1587817 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
 2026-11-11 21:15:32 | telegram | OK | FLRY3 | 1587817 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-11-11 21:45:33 | telegram | OK | COGN3 | 1587916 | Dados Econômico-Financeiros | Divulgação de Resultados 3T26 | chat 1496332324
+2026-11-11 21:45:33 | telegram | OK | COGN3 | 1587916 | Dados Econômico-Financeiros | Divulgação de Resultados 3T26 | chat 8369248929
