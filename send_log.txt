@@ -605,3 +605,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-11 22:55:38 | telegram | OK | HAPV3 | 1588006 | Dados Econômico-Financeiros | ITR 3T26 - IFRS 17 | chat 8369248929
 2026-11-11 23:01:04 | telegram | OK | HAPV3 | 1588011 | Comunicado ao Mercado | Venda dos Imóveis do Hospital Octaviano Neves | chat 1496332324
 2026-11-11 23:01:04 | telegram | OK | HAPV3 | 1588011 | Comunicado ao Mercado | Venda dos Imóveis do Hospital Octaviano Neves | chat 8369248929
+2026-11-11 23:05:27 | telegram | OK | YDUQ3 | 1588015 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 1496332324
+2026-11-11 23:05:27 | telegram | OK | YDUQ3 | 1588015 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
