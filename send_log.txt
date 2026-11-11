@@ -587,3 +587,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-11 00:05:31 | telegram | OK | RDOR3 | 1587605 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-11-11 00:05:31 | telegram | OK | RDOR3 | 1587603 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-11-11 00:05:32 | telegram | OK | RDOR3 | 1587603 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-11-11 13:05:34 | telegram | OK | BLAU3 | 1587723 | Comunicado ao Mercado | Apresentação de Resultados 3T26 | chat 1496332324
+2026-11-11 13:05:35 | telegram | OK | BLAU3 | 1587723 | Comunicado ao Mercado | Apresentação de Resultados 3T26 | chat 8369248929
