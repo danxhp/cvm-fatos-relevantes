@@ -599,3 +599,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-11 22:20:34 | telegram | OK | QUAL3 | 1587958 | Dados Econômico-Financeiros | release 3T26 | chat 8369248929
 2026-11-11 22:40:32 | telegram | OK | COGN3 | 1587991 | Fato Relevante | Programa de Recompra de Ações | chat 1496332324
 2026-11-11 22:40:32 | telegram | OK | COGN3 | 1587991 | Fato Relevante | Programa de Recompra de Ações | chat 8369248929
+2026-11-11 22:50:49 | telegram | OK | HAPV3 | 1588002 | Dados Econômico-Financeiros | Release 3T26 PT e EN | chat 1496332324
+2026-11-11 22:50:49 | telegram | OK | HAPV3 | 1588002 | Dados Econômico-Financeiros | Release 3T26 PT e EN | chat 8369248929
