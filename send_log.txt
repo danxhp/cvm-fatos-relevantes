@@ -595,3 +595,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-11 21:45:33 | telegram | OK | COGN3 | 1587916 | Dados Econômico-Financeiros | Divulgação de Resultados 3T26 | chat 8369248929
 2026-11-11 22:10:46 | telegram | OK | QUAL3 | 1587944 | Dados Econômico-Financeiros | Demonstrações Financeiras Intermediárias 4ºTri26 - Versão Português | chat 1496332324
 2026-11-11 22:10:46 | telegram | OK | QUAL3 | 1587944 | Dados Econômico-Financeiros | Demonstrações Financeiras Intermediárias 4ºTri26 - Versão Português | chat 8369248929
+2026-11-11 22:20:34 | telegram | OK | QUAL3 | 1587958 | Dados Econômico-Financeiros | release 3T26 | chat 1496332324
+2026-11-11 22:20:34 | telegram | OK | QUAL3 | 1587958 | Dados Econômico-Financeiros | release 3T26 | chat 8369248929
