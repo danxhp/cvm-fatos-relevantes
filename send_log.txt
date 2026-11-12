@@ -609,3 +609,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-11 23:05:27 | telegram | OK | YDUQ3 | 1588015 | Comunicado ao Mercado | Aquisição/Alienação de Participação Acionária Relevante | chat 8369248929
 2026-11-12 11:06:07 | telegram | OK | HAPV3 | 1588097 | Comunicado ao Mercado | Apresentação 3T26 PT e EN | chat 1496332324
 2026-11-12 11:06:08 | telegram | OK | HAPV3 | 1588097 | Comunicado ao Mercado | Apresentação 3T26 PT e EN | chat 8369248929
+2026-11-12 12:00:39 | telegram | OK | QUAL3 | 1588145 | Comunicado ao Mercado | Apresentação Call 3T26 | chat 1496332324
+2026-11-12 12:00:40 | telegram | OK | QUAL3 | 1588145 | Comunicado ao Mercado | Apresentação Call 3T26 | chat 8369248929
