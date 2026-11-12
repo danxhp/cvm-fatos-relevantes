@@ -613,3 +613,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-12 12:00:40 | telegram | OK | QUAL3 | 1588145 | Comunicado ao Mercado | Apresentação Call 3T26 | chat 8369248929
 2026-11-12 13:35:39 | telegram | OK | COGN3 | 1588185 | Comunicado ao Mercado | Apresentação de Resultados 3T26 | chat 1496332324
 2026-11-12 13:35:40 | telegram | OK | COGN3 | 1588185 | Comunicado ao Mercado | Apresentação de Resultados 3T26 | chat 8369248929
+2026-11-12 14:00:36 | telegram | OK | ONCO3 | 1588223 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 1496332324
+2026-11-12 14:00:36 | telegram | OK | ONCO3 | 1588223 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
+2026-11-12 14:00:37 | telegram | OK | ONCO3 | 1588222 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
+2026-11-12 14:00:37 | telegram | OK | ONCO3 | 1588222 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
