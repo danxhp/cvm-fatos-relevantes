@@ -617,3 +617,7 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-12 14:00:36 | telegram | OK | ONCO3 | 1588223 | Valores Mobiliários Negociados e Detidos | Posição Consolidada | chat 8369248929
 2026-11-12 14:00:37 | telegram | OK | ONCO3 | 1588222 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 1496332324
 2026-11-12 14:00:37 | telegram | OK | ONCO3 | 1588222 | Valores Mobiliários Negociados e Detidos | Posição Individual - Cia, Controladas e Coligadas | chat 8369248929
+2026-11-12 21:15:41 | telegram | OK | RDOR3 | 1588419 | Dados Econômico-Financeiros | Press-release de Resultados 3T26 | chat 1496332324
+2026-11-12 21:15:42 | telegram | OK | RDOR3 | 1588419 | Dados Econômico-Financeiros | Press-release de Resultados 3T26 | chat 8369248929
+2026-11-12 21:15:42 | telegram | OK | AFYA | 0001292814-26-005277 | SEC 6-K | 6-K | chat 1496332324
+2026-11-12 21:15:43 | telegram | OK | AFYA | 0001292814-26-005277 | SEC 6-K | 6-K | chat 8369248929
