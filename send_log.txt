@@ -623,3 +623,9 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-12 21:15:43 | telegram | OK | AFYA | 0001292814-26-005277 | SEC 6-K | 6-K | chat 8369248929
 2026-11-12 21:21:00 | telegram | OK | YDUQ3 | 1588433 | Dados Econômico-Financeiros | Release 3T26 | chat 1496332324
 2026-11-12 21:21:00 | telegram | OK | YDUQ3 | 1588433 | Dados Econômico-Financeiros | Release 3T26 | chat 8369248929
+2026-11-12 21:26:24 | telegram | OK | YDUQ3 | 1588445 | Comunicado ao Mercado | Apresentação 3T26 | chat 1496332324
+2026-11-12 21:26:25 | telegram | OK | YDUQ3 | 1588445 | Comunicado ao Mercado | Apresentação 3T26 | chat 8369248929
+2026-11-12 21:26:25 | telegram | OK | YDUQ3 | 1588437 | Dados Econômico-Financeiros | Release 3T26 | chat 1496332324
+2026-11-12 21:26:25 | telegram | OK | YDUQ3 | 1588437 | Dados Econômico-Financeiros | Release 3T26 | chat 8369248929
+2026-11-12 21:26:26 | telegram | OK | AFYA | 0001292814-26-005281 | SEC 6-K | 6-K | chat 1496332324
+2026-11-12 21:26:26 | telegram | OK | AFYA | 0001292814-26-005281 | SEC 6-K | 6-K | chat 8369248929
