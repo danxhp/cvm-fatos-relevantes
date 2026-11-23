@@ -639,3 +639,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-19 12:35:29 | telegram | OK | HAPV3 | 1591329 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 | chat 8369248929
 2026-11-20 22:40:25 | telegram | OK | HAPV3 | 1592251 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 | chat 1496332324
 2026-11-20 22:40:26 | telegram | OK | HAPV3 | 1592251 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 | chat 8369248929
+2026-11-23 21:35:21 | telegram | OK | HAPV3 | 1592654 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 | chat 1496332324
+2026-11-23 21:35:22 | telegram | OK | HAPV3 | 1592654 | Comunicado ao Mercado | Esclarecimentos sobre questionamentos da CVM/B3 | chat 8369248929
