@@ -645,3 +645,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-24 13:20:47 | telegram | OK | QUAL3 | 1592891 | Comunicado ao Mercado | Institucional | chat 8369248929
 2026-11-25 21:10:30 | telegram | OK | YDUQ3 | 1593811 | Fato Relevante | AGE YDUQS | chat 1496332324
 2026-11-25 21:10:30 | telegram | OK | YDUQ3 | 1593811 | Fato Relevante | AGE YDUQS | chat 8369248929
+2026-11-25 21:40:28 | telegram | OK | TIMS3 | 1593875 | Comunicado ao Mercado | TIM e SBA celebram novo contrato de longo prazo para infraestrutura de rede | chat 1496332324
+2026-11-25 21:40:29 | telegram | OK | TIMS3 | 1593875 | Comunicado ao Mercado | TIM e SBA celebram novo contrato de longo prazo para infraestrutura de rede | chat 8369248929
