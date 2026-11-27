@@ -657,3 +657,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-26 00:50:31 | telegram | OK | ONCO3 | 1593980 | Fato Relevante | Pedido de convocação de AGE | chat 8369248929
 2026-11-26 19:01:16 | telegram | OK | QUAL3 | 1594134 | Dados Econômico-Financeiros | Demonstrações Financeiras Intermediárias 3T2026 - Versão Inglês | chat 1496332324
 2026-11-26 19:01:17 | telegram | OK | QUAL3 | 1594134 | Dados Econômico-Financeiros | Demonstrações Financeiras Intermediárias 3T2026 - Versão Inglês | chat 8369248929
+2026-11-27 12:00:33 | telegram | OK | ODPV3 | 1594314 | Fato Relevante | Indicação para o Cargo de Ministro de Estado da Fazenda | chat 1496332324
+2026-11-27 12:00:33 | telegram | OK | ODPV3 | 1594314 | Fato Relevante | Indicação para o Cargo de Ministro de Estado da Fazenda | chat 8369248929
