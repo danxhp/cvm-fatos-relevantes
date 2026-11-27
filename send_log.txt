@@ -659,3 +659,5 @@ timestamp | canal | status | ticker | protocolo | categoria | assunto | detalhe
 2026-11-26 19:01:17 | telegram | OK | QUAL3 | 1594134 | Dados Econômico-Financeiros | Demonstrações Financeiras Intermediárias 3T2026 - Versão Inglês | chat 8369248929
 2026-11-27 12:00:33 | telegram | OK | ODPV3 | 1594314 | Fato Relevante | Indicação para o Cargo de Ministro de Estado da Fazenda | chat 1496332324
 2026-11-27 12:00:33 | telegram | OK | ODPV3 | 1594314 | Fato Relevante | Indicação para o Cargo de Ministro de Estado da Fazenda | chat 8369248929
+2026-11-27 22:40:31 | telegram | OK | RDOR3 | 1594590 | Aviso aos Acionistas | Antecipação Dividendos Intercalares | chat 1496332324
+2026-11-27 22:40:31 | telegram | OK | RDOR3 | 1594590 | Aviso aos Acionistas | Antecipação Dividendos Intercalares | chat 8369248929
